@@ -51,6 +51,8 @@ public:
 
     int getNumParameters();
 
+	bool isMetaParameter (int) const;
+
     float getParameter (int index);
     void setParameter (int index, float newValue);
 
@@ -99,7 +101,7 @@ public:
     String get_prog_name();
     void set_prog_name(String s) {params->set_prog_name(s);}
 
-    int index_of_nrpn(int nrpn);
+    int index_of_nrpn(int nrpn) const;
     IonSysexParam *param_of_nrpn(int nrpn);
     bool get_progchange() {return prog_changed;}
     void set_progchange(bool v) {prog_changed = v;}

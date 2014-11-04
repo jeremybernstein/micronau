@@ -81,6 +81,17 @@ float MicronauAudioProcessor::getParameter (int index)
     return nrpns[index]->getValue();
 }
 
+bool MicronauAudioProcessor::isMetaParameter (int index) const
+{
+    IonSysexParam *param;
+    param = nrpns[index];
+
+	// We need this here because Logic Pro 9 fails to validate the plugin if we don't specify that the tracking gen parameters are "meta-parameters".
+	// They are meta-parameters in the sense that changing them can change other parameters. What happens is if the user edits a tracking point from a preset tracking
+	// pattern, the pattern switches from the preset to "custom". Also, changing preset patterns changes all the tracking points. Hence they are all meta params.
+	return param->isTrackingGenValue() || index == index_of_nrpn(631);
+}
+
 void MicronauAudioProcessor::setParameter (int index, float newValue)
 {
     IonSysexParam *param;
@@ -275,7 +286,7 @@ AudioProcessorEditor* MicronauAudioProcessor::createEditor()
 }
 
 //==============================================================================
-int MicronauAudioProcessor::index_of_nrpn(int nrpn)
+int MicronauAudioProcessor::index_of_nrpn(int nrpn) const
 {
     return param_by_nrpn[nrpn]->index;
 }
