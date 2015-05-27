@@ -62,7 +62,13 @@ MicronauAudioProcessor::~MicronauAudioProcessor()
 {
     if (midi_in != NULL) {
         midi_in->stop();
+		delete midi_in;
     }
+	
+	if (midi_out != NULL) {
+		midi_out->stopBackgroundThread();
+		delete midi_out;
+	}
 }
 
 //==============================================================================
@@ -81,15 +87,12 @@ float MicronauAudioProcessor::getParameter (int index)
     return nrpns[index]->getValue();
 }
 
-bool MicronauAudioProcessor::isMetaParameter (int index) const
+bool MicronauAudioProcessor::isMetaParameter (int parameterIndex) const
 {
-    IonSysexParam *param;
-    param = nrpns[index];
-
 	// We need this here because Logic Pro 9 fails to validate the plugin if we don't specify that the tracking gen parameters are "meta-parameters".
 	// They are meta-parameters in the sense that changing them can change other parameters. What happens is if the user edits a tracking point from a preset tracking
 	// pattern, the pattern switches from the preset to "custom". Also, changing preset patterns changes all the tracking points. Hence they are all meta params.
-	return param->isTrackingGenValue() || index == index_of_nrpn(631);
+	return nrpns[parameterIndex]->isTrackingGenValue() || parameterIndex == index_of_nrpn(631);
 }
 
 void MicronauAudioProcessor::setParameter (int index, float newValue)
@@ -254,6 +257,7 @@ void MicronauAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+	sample_rate = sampleRate;
 }
 
 void MicronauAudioProcessor::releaseResources()
@@ -264,9 +268,10 @@ void MicronauAudioProcessor::releaseResources()
 
 void MicronauAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
 {
-    // update parameters with incoming midi msgs
-    
-    
+    // relay any incoming midi msgs from the host block out to our midi output
+	if (midi_out)
+		midi_out->sendBlockOfMessages(midiMessages, Time::getMillisecondCounter(), sample_rate);
+	
     // silence all output channels
     for (int i = 0; i < getNumOutputChannels(); ++i)
     {
@@ -532,6 +537,7 @@ void MicronauAudioProcessor::set_midi_port(int in_out, String p)
         case MIDI_OUT_IDX:
             if (p != midi_out_port) {
                 if (midi_out != NULL) {
+					midi_out->stopBackgroundThread();
                     delete midi_out;
                 }
                 midi_out_port = p;
@@ -540,6 +546,7 @@ void MicronauAudioProcessor::set_midi_port(int in_out, String p)
                     midi_out = NULL;
                 } else {
                     midi_out = MidiOutput::openDevice(idx);
+					midi_out->startBackgroundThread();
                 }
             }
             break;

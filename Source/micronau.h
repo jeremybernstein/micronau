@@ -51,8 +51,6 @@ public:
 
     int getNumParameters();
 
-	bool isMetaParameter (int) const;
-
     float getParameter (int index);
     void setParameter (int index, float newValue);
 
@@ -63,6 +61,7 @@ public:
     float getParameterMaxValue (int parameterIndex);
     float getParameterDefaultValue (int parameterIndex);
     int getParameterNumSteps (int parameterIndex);
+    bool isMetaParameter (int parameterIndex) const;
 
     const String getInputChannelName (int channelIndex) const;
     const String getOutputChannelName (int channelIndex) const;
@@ -128,6 +127,8 @@ private:
     IonSysexParams *params;
     Array<IonSysexParam*> nrpns;
     HashMap<int, ext_param *> param_by_nrpn;
+
+	double sample_rate; // used for midi thru timing
 
     MidiOutput *midi_out;
     unsigned int midi_out_channel;

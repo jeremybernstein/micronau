@@ -20,7 +20,11 @@
 
 #misc
 *~
-Builds/MacOSX/micronau.xcodeproj/project.pbxproj
+Builds/MacOSX/build/
+Builds/MacOSX/micronau.xcodeproj/xcuserdata/
 Builds/MacOSX/micronau.xcodeproj/project.xcworkspace/xcuserdata/
+Builds/MacOSX/micronau.xcodeproj/project.xcworkspace/xcshareddata/
 JuceLibraryCode/BinaryData.cpp
 JuceLibraryCode/BinaryData.h
+JuceLibraryCode/modules/juce_core/json/
+.DS_Store

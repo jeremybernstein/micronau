@@ -126,7 +126,7 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
     addAndMakeVisible (prog_name);
     prog_name->setBounds(910, 155, 120, 15);
     prog_name->addListener(this);
-    add_box(666, 910, 175, 100,  NULL, 0, NULL);
+    add_box(666, 910, 175, 100,  NULL, 0, NULL); // category selector
     add_box(100, 910, 195, 30, "Bank", 1, NULL);
     add_box(101, 950, 195, 30, "Prgm", 1, NULL);
 
