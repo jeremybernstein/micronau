@@ -52,7 +52,6 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
 	create_portamento(PORTA_X, PORTA_Y);
 	create_xyz(XYZ_X, XYZ_Y);
 	create_output(OUTPUT_X, OUTPUT_Y);
-	create_tracking(TRACKING_X, TRACKING_Y);
 	create_lfo(LFO_X, LFO_Y);
 	create_fx_and_tracking_tabs(FX_X,FX_Y);
 
@@ -96,39 +95,39 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
     param_display->setColour (TextEditor::textColourId, Colours::black);
     param_display->setColour (TextEditor::backgroundColourId, Colour (0x00000000));
     param_display->setFont (Font (18.00f, Font::plain));
-	param_display->setBounds(875,15,170,45);
+	param_display->setBounds(875,LCD_Y,170,LCD_Y + LCD_H);
 	addAndMakeVisible(param_display);
 
     midi_in_menu = new StdComboBox ();
     midi_in_menu->setEditableText (false);
     midi_in_menu->addListener(this);
     addAndMakeVisible (midi_in_menu);
-    midi_in_menu->setBounds(910, 70, 100, 15);
-	add_label("midi in", 910 - 64, 72, 75, 15);
+    midi_in_menu->setBounds(MIDI_X, MIDI_IN_Y, 100, MIDI_H);
+	add_label("midi in", MIDI_X - 64, MIDI_IN_Y+2, 75, MIDI_H);
 
     midi_out_menu = new StdComboBox ();
     midi_out_menu->setEditableText (false);
     midi_out_menu->addListener(this);
     addAndMakeVisible (midi_out_menu);
-    midi_out_menu->setBounds(910, 95, 100, 15);
-	add_label("midi out", 910 - 60, 97, 75, 15);
+    midi_out_menu->setBounds(MIDI_X, MIDI_OUT_Y, 100, MIDI_H);
+	add_label("midi out", MIDI_X - 60, MIDI_OUT_Y+2, 75, MIDI_H);
  
     midi_out_chan = new StdComboBox ();
     midi_out_chan->setEditableText (false);
     midi_out_chan->addListener(this);
     addAndMakeVisible (midi_out_chan);
-    midi_out_chan->setBounds(1015, 95, 33, 15);
+    midi_out_chan->setBounds(MIDI_X + 105, MIDI_OUT_Y, 33, MIDI_H);
     for (int i = 0; i < 16; i++) {
         midi_out_chan->addItem(String(i+1), i+1);
     }
 
     prog_name = new LcdTextEditor();
     addAndMakeVisible (prog_name);
-    prog_name->setBounds(910, 155, 120, 15);
+    prog_name->setBounds(910, PROG_NAME_Y, 120, 15);
     prog_name->addListener(this);
-    add_box(666, 910, 175, 100,  NULL, 0, NULL); // category selector
-    add_box(100, 910, 195, 30, "Bank", 1, NULL);
-    add_box(101, 950, 195, 30, "Prgm", 1, NULL);
+    add_box(666, 910, PROG_NAME_Y+20, 100,  NULL, 0, NULL); // category selector
+    add_box(100, 910, PROG_NAME_Y+40, 30, "Bank", 1, NULL);
+    add_box(101, 950, PROG_NAME_Y+40, 30, "Prgm", 1, NULL);
 
     logo = Drawable::createFromImageData (BinaryData::logo_svg, BinaryData::logo_svgSize);
 
@@ -482,16 +481,19 @@ void MicronauAudioProcessorEditor::create_output(int x, int y)
     add_label("program", x + 28, y + 95, 50, 15);
 }
 
-void MicronauAudioProcessorEditor::create_tracking(int x, int y)
+void MicronauAudioProcessorEditor::create_tracking(int x, int y, Component* parent)
 {
-	add_group_box("tracking", x, y, TRACKING_W, TRACKING_H);
+	trackgen = new SliderBank(owner, this);
+	trackgen->setTopLeftPosition(x+80, y);
+	parent->addAndMakeVisible(trackgen);
 
 	x += 5;
 	y += 0;
 
-    add_box(630, x, y, 60, "input", 0);
-    add_box(631, x, y + 20, 60, "preset", 0);
-    add_box(632, x, y + 40, 25, "points", 0);
+    add_box(630, x, y, 60, "input", 1, parent);
+    add_box(631, x, y + 40, 60, "preset", 1, parent);
+    add_box(632, x, y + 80, 25, "points", 0, parent);
+	
 }
 
 void MicronauAudioProcessorEditor::create_lfo(int x, int y)
@@ -520,19 +522,21 @@ void MicronauAudioProcessorEditor::create_fx_and_tracking_tabs(int x, int y)
 {
 	add_group_box("fx/tracking", x, y, FX_W, FX_H);
 
-	Component* fx1tab = new Component;
-	Component* fx2tab = new Component;
-	trackgen = new SliderBank(owner, this);
+	Component* fx1Tab = new Component;
+	Component* fx2Tab = new Component;
+	Component* trackingTab = new Component;
 
-	create_fx1(0, 0, fx1tab);
-	create_fx2(0, 0, fx2tab);
+	create_fx1(0, 0, fx1Tab);
+	create_fx2(0, 0, fx2Tab);
+	create_tracking(0, 0, trackingTab);
 
-	fx_and_tracking_tabs = new MicronTabBar(TabbedButtonBar::TabsAtLeft);
+	fx_and_tracking_tabs = new MicronTabBar(TabbedButtonBar::TabsAtBottom);
+	fx_and_tracking_tabs->setTabBarMargins(10,3, 0,-9);
+	fx_and_tracking_tabs->setTabBarDepth (45);
 
-	fx_and_tracking_tabs->setTabBarDepth (65);
-	fx_and_tracking_tabs->addTab ("fx1", Colour (0x00d3d3d3), fx1tab, true);
-	fx_and_tracking_tabs->addTab ("fx2", Colour (0x00d3d3d3), fx2tab, true);
-	fx_and_tracking_tabs->addTab ("tgen", Colour (0x00d3d3d3), trackgen, true);
+	fx_and_tracking_tabs->addTab ("fx1", Colour (0x00d3d3d3), fx1Tab, true);
+	fx_and_tracking_tabs->addTab ("fx2", Colour (0x00d3d3d3), fx2Tab, true);
+	fx_and_tracking_tabs->addTab ("tgen", Colour (0x00d3d3d3), trackingTab, true);
 	fx_and_tracking_tabs->setCurrentTabIndex (0);
     fx_and_tracking_tabs->setBounds (x, y, FX_W, FX_H);
 
@@ -670,7 +674,7 @@ void MicronauAudioProcessorEditor::paint (Graphics& g)
 
     jassert (logo != 0);
     if (logo != 0)
-        logo->drawWithin (g, Rectangle<float> (790, 20, 68, 40), RectanglePlacement::stretchToFit, 1.000f);
+        logo->drawWithin (g, Rectangle<float> (LOGO_X, LOGO_Y, LOGO_W, LOGO_Y+LOGO_H), RectanglePlacement::stretchToFit, 1.000f);
 }
 
 void MicronauAudioProcessorEditor::updateGuiComponents()

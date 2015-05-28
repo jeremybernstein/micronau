@@ -166,6 +166,24 @@ private:
 		MODMAT_W = 755,
 		MODMAT_H = 100,
 
+		LCD_Y = MODMAT_Y-14,
+		LCD_H = 34,
+
+		LOGO_X = 788,
+		LOGO_Y = LCD_Y + 2,
+		LOGO_W = 68,
+		LOGO_H = 32,
+		
+		MIDI_X = 910,
+		MIDI_IN_Y = LCD_Y + 45,
+		MIDI_OUT_Y = MIDI_IN_Y + 20,
+		MIDI_H = 15,
+
+		SYNC_X = 875,
+		SYNC_Y = MIDI_OUT_Y + 20,
+
+		PROG_NAME_Y = SYNC_Y + 32,
+
 		OSCS_X = MODMAT_X,
 		OSCS_Y = 145,
 		OSCS_W = 210,
@@ -191,9 +209,6 @@ private:
 		POSTFILT_W = 200,
 		POSTFILT_H = FILT_H,
 
-		SYNC_X = 875,
-		SYNC_Y = POSTFILT_Y - 27,
-
 		LFO_X = PREFILT_X,
 		LFO_Y = 440,
 		LFO_W = 185,
@@ -215,22 +230,22 @@ private:
 		PORTA_H = 55,
 		
 		XYZ_X = 900,
-		XYZ_Y = 270,
+		XYZ_Y = PROG_NAME_Y+95,
 		XYZ_W = 150,
 		XYZ_H = 70,
 
 		OUTPUT_X = XYZ_X,
-		OUTPUT_Y = XYZ_Y + 115,
+		OUTPUT_Y = XYZ_Y + 97,
 		OUTPUT_W = XYZ_W,
 		OUTPUT_H = 135,
 
 		TRACKING_X = 930,
-		TRACKING_Y = ENVS_Y + 245,
+		TRACKING_Y = OUTPUT_Y + 160,
 		TRACKING_W = 120,
 		TRACKING_H = 70,
         
         FX_X = ENVS_X,
-        FX_Y = TRACKING_Y,
+        FX_Y = ENVS_Y + 245,
         FX_W = 440,
         FX_H = 105
 	};
@@ -253,11 +268,11 @@ private:
     void create_portamento(int x, int y);
     void create_xyz(int x, int y);
     void create_output(int x, int y);
-    void create_tracking(int x, int y);
     void create_lfo(int x, int y);
 	void create_fx_and_tracking_tabs(int x, int y);
     void create_fx1(int x, int y, Component* parent);
     void create_fx2(int x, int y, Component* parent);
+	void create_tracking(int x, int y, Component* parent);
 
 	void updateGuiComponents();
     void update_tracking();

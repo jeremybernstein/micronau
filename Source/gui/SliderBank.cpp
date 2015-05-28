@@ -17,9 +17,9 @@ SliderBank::SliderBank (MicronauAudioProcessor *owner, MicronauAudioProcessorEdi
 {
 	for (int i = 0; i < 33; ++i)
 	{
-		const int SLIDER_SPACING = 11;
-		const int SLIDER_WIDTH = 11;
+		const int SLIDER_WIDTH = 9;
 		const int SLIDER_HEIGHT = 100;
+		const int SLIDER_SPACING = SLIDER_WIDTH;
 
 		ext_slider *newSlider = new ext_slider(owner, 633+i);
         parent->addSlider(newSlider);
@@ -77,8 +77,8 @@ void SliderBank::updateBoundsX()
                MicronSlider* slider = dynamic_cast<MicronSlider*>(getChildComponent(i));
                if (slider && slider->isVisible())
                {
-                       const int sliderLeftEdge = slider->getBounds().getX() - 5;
-                       const int sliderRightEdge = slider->getBounds().getRight() + 5;
+                       const int sliderLeftEdge = slider->getBounds().getX();
+                       const int sliderRightEdge = slider->getBounds().getRight() + 2; // slight tweak just for right edge
                        if (sliderLeftEdge < minBoundX)
                                minBoundX = sliderLeftEdge;
                        if (sliderRightEdge > maxBoundX)

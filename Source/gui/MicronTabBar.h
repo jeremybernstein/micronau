@@ -24,14 +24,14 @@ public:
 	// NOTE: tabs are always on the left: we're using the orientation to position the labels the next to the buttons.
     explicit MicronTabBar (TabbedButtonBar::Orientation orientation);
 
-	void setTabBarDepth (const int newDepth);
-	void setTabBarMargins (const int newMarginVertical, const int newMarginLeft);
+	void setTabBarDepth (int newDepth);
+	void setTabBarMargins (int newMarginVertical, int newMarginLeft, int tweakX = 0, int tweakY = 0);
 
 	// NOTE: not using sendChangeMessage, only there for compatibility with TabbedComponent interface.
     void setCurrentTabIndex (int newTabIndex, bool sendChangeMessage = true);
 
 	// NOTE: only using tabName, contentComponent, and deleteComponentWhenNotNeeded parameters of the original TabbedComponent interface.
-	void addTab (const String& tabName, Colour tabBackgroundColour, Component* const contentComponent, const bool deleteComponentWhenNotNeeded, const int insertIndex = -1);
+	void addTab (const String& tabName, Colour tabBackgroundColour, Component* const contentComponent, bool deleteComponentWhenNotNeeded, int insertIndex = -1);
 
 	void buttonClicked (Button*);
 
@@ -62,6 +62,8 @@ private:
 	int tabBarDepth;
 	int tabBarMarginVertical;
 	int tabBarMarginLeft;
+	int tabsTweakX;
+	int tabsTweakY;
 
 	Image buttonOffImg;
 	Image buttonHoverImg;

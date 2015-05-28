@@ -15,7 +15,7 @@
 MicronTabBar::MicronTabBar (TabbedButtonBar::Orientation orientation) :
 								curTabIndex(INVALID_TAB_INX),
 								labelOrientation(orientation),
-								tabBarDepth(65), tabBarMarginVertical(30), tabBarMarginLeft(0)
+								tabBarDepth(65), tabBarMarginVertical(30), tabBarMarginLeft(0), tabsTweakX(0), tabsTweakY(0)
 {
     buttonOffImg = ImageCache::getFromMemory (BinaryData::led_button_off_png,
                                            BinaryData::led_button_off_pngSize);
@@ -28,8 +28,8 @@ MicronTabBar::MicronTabBar (TabbedButtonBar::Orientation orientation) :
 void MicronTabBar::addTab (const String& tabName,
 						  Colour /*tabBackgroundColour*/,
 						  Component* const contentComponent,
-						  const bool deleteComponentWhenNotNeeded,
-						  const int /*insertIndex*/)
+						  bool deleteComponentWhenNotNeeded,
+						  int /*insertIndex*/)
 {
 	Label* label = createLabelForTab(tabName);
 	addAndMakeVisible(label);
@@ -47,16 +47,18 @@ void MicronTabBar::addTab (const String& tabName,
 		button->triggerClick();
 }
 
-void MicronTabBar::setTabBarDepth (const int newDepth)
+void MicronTabBar::setTabBarDepth (int newDepth)
 {
 	tabBarDepth = newDepth;
 	resized();
 }
 
-void MicronTabBar::setTabBarMargins (const int newMarginVertical, const int newMarginLeft)
+void MicronTabBar::setTabBarMargins (int newMarginVertical, int newMarginLeft, int tweakX, int tweakY)
 {
 	tabBarMarginVertical = newMarginVertical;
 	tabBarMarginLeft = newMarginLeft;
+	tabsTweakX = tweakX;
+	tabsTweakY = tweakY;
 	resized();
 }
 
@@ -107,6 +109,10 @@ void MicronTabBar::resized()
 	const int tabSpacing = (numTabs <= 1) ? 0 : (getHeight() - 2.0f*tabBarMarginVertical - tabHeight) / (numTabs-1);
 
 	int curTabPos = 0.5f*getHeight() - 0.5f*tabSpacing*(numTabs-1) - 0.5f*tabHeight;
+
+	labelsX += tabsTweakX;
+	buttonsX += tabsTweakX;
+	curTabPos += tabsTweakY;
 
 	// layout all the labels, buttons, and content components
 	for (int tabInx = 0; tabInx < numTabs; ++tabInx)
