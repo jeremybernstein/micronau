@@ -276,10 +276,14 @@ void MicronauAudioProcessor::releaseResources()
 
 void MicronauAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
 {
-    // relay any incoming midi msgs from the host block out to our midi output
-	if (midi_out)
-		midi_out->sendBlockOfMessages(midiMessages, Time::getMillisecondCounter(), sample_rate);
-	
+	{
+		ScopedLock lock(midi_port_lock);
+
+		// relay any incoming midi msgs from the host block out to our midi output
+		if (midi_out)
+			midi_out->sendBlockOfMessages(midiMessages, Time::getMillisecondCounter(), sample_rate);
+	}
+
     // silence all output channels
     for (int i = 0; i < getNumOutputChannels(); ++i)
     {
@@ -540,6 +544,8 @@ void MicronauAudioProcessor::send_request()
 
 void MicronauAudioProcessor::set_midi_port(int in_out, String p)
 {
+	ScopedLock lock(midi_port_lock);
+
     int idx;
     switch (in_out) {
         case MIDI_OUT_IDX:

@@ -133,6 +133,7 @@ private:
     MidiOutput *midi_out;
     unsigned int midi_out_channel;
     String midi_out_port;
+    CriticalSection midi_port_lock; // use this to ensure midi port is not halfway changed when process block runs
 
     MidiInput *midi_in;
     String midi_in_port;
