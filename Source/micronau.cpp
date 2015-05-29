@@ -141,6 +141,14 @@ void MicronauAudioProcessor::setParameter (int index, float newValue)
     if (nrpn_num == NO_NRPN) {
         return;
     }
+	if (params->shouldSkipFx1(param) || params->shouldSkipFx2(param)) {
+		return;
+	}
+	if (nrpn_num >= 2048) {
+		return;
+	}
+
+
     if (nrpn_num >= 512) {
         nrpn_num -= 512;
     }
@@ -539,6 +547,7 @@ void MicronauAudioProcessor::set_midi_port(int in_out, String p)
                 if (midi_out != NULL) {
 					midi_out->stopBackgroundThread();
                     delete midi_out;
+					midi_out = NULL; // NOTE: must set the pointer to null due to a race-condition when setting output port to None. ProcessBlock() may attempt to use dangling midi_out pointer.
                 }
                 midi_out_port = p;
                 idx = midi_find_port_by_name(in_out, midi_out_port);
@@ -555,6 +564,7 @@ void MicronauAudioProcessor::set_midi_port(int in_out, String p)
                 if (midi_in != NULL) {
                     midi_in->stop();
                     delete midi_in;
+					midi_in = NULL;
                 }
                 midi_in_port = p;
                 idx = midi_find_port_by_name(in_out, midi_in_port);
