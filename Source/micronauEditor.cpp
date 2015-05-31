@@ -588,16 +588,16 @@ void MicronauAudioProcessorEditor::create_fx_and_tracking_tabs(int x, int y)
 
 void MicronauAudioProcessorEditor::create_fx1(int x, int y, Component* parent)
 {
-	x -= 25;
-
     int i;
     int o = 0;
+
+	add_box(800, 40, 10, 80, "type", 2, parent);
 
     for (i = 0; i < 7; i++) {
         int idx;
         Component *c = new Component();
+		c->setInterceptsMouseClicks(false, true); // allows interaction with the fx1 type selector box
 
-        add_box(800, 70, 10, 80, "type", 2, c);
         c->setBounds(x, y, FX_W, FX_H);
         fx1[i] = c;
 
@@ -610,7 +610,7 @@ void MicronauAudioProcessorEditor::create_fx1(int x, int y, Component* parent)
 
         idx = i - 1;
         if (idx < 5) {
-			const int offsX = -50;
+			const int offsX = -60;
 			
 			add_knob(844 + (idx * 10), offsX + 150, 40, "feedbck", c);
 			if (idx == 0) {
@@ -630,7 +630,7 @@ void MicronauAudioProcessorEditor::create_fx1(int x, int y, Component* parent)
 			}
 
         } else {
-			const int offsX = -50;
+			const int offsX = -60;
 			
             int v_x = 230;
             int v_y = 30;
@@ -652,8 +652,8 @@ void MicronauAudioProcessorEditor::create_fx1(int x, int y, Component* parent)
 
 void MicronauAudioProcessorEditor::create_fx2(int x, int y, Component* parent)
 {
-	x -= 25;
-    
+	add_box(801, 40, 10, 80, "type", 2, parent);
+
     int i;
     // 1, 2: sync rate, button, knobs: delay, regen, bright
     // 3: l delay , regen, bringh, r delay
@@ -661,8 +661,8 @@ void MicronauAudioProcessorEditor::create_fx2(int x, int y, Component* parent)
     for (i = 0; i < 7; i++) {
         int idx;
         Component *c = new Component();
-        
-        add_box(801, 70, 10, 80, "type", 2, c);
+		c->setInterceptsMouseClicks(false, true); // allows interaction with the fx2 type selector box
+		
         c->setBounds(x, y, FX_W, FX_H);
         fx2[i] = c;
         
@@ -671,19 +671,19 @@ void MicronauAudioProcessorEditor::create_fx2(int x, int y, Component* parent)
         }
 
         idx = i - 1;
-        int offsX = 140;
+        int offsX = 160;
         switch (idx) {
             case 0:
             case 1:
                 add_knob(920 + (idx * 5), offsX, 40, "delay", c);
                 add_knob(921 + (idx * 5), offsX + 40, 40, "regen", c);
                 add_knob(922 + (idx * 5), offsX + 80, 40, "bright", c);
-                add_box(924 + (idx * 5), 70, 40, 60, NULL, 2, c);
-                add_button(923 + (idx*5), 70, 60, "sync", false, c);
+                add_box(924 + (idx * 5), offsX - 70, 40, 60, NULL, 2, c);
+                add_button(923 + (idx*5), offsX - 70, 60, "sync", false, c);
               break;
                 
             case 2:
-                offsX = 70;
+                offsX -= 70;
                 add_knob(920 + (idx * 5), offsX, 40, "l delay", c);
                 add_knob(921 + (idx * 5), offsX + 40, 40, "regen", c);
                 add_knob(922 + (idx * 5), offsX + 80, 40, "bright", c);
@@ -693,7 +693,7 @@ void MicronauAudioProcessorEditor::create_fx2(int x, int y, Component* parent)
             case 3:
             case 4:
             case 5:
-                offsX = 70;
+                offsX -= 70;
                 add_knob(920 + (idx * 5), offsX, 40, "diffuse", c);
                 add_knob(921 + (idx * 5), offsX + 40, 40, "decay", c);
                 add_knob(922 + (idx * 5), offsX + 80, 40, "bright", c);
