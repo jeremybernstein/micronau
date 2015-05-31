@@ -17,6 +17,8 @@
 #include "gui/MicronToggleButton.h"
 #include "gui/MicronTabBar.h"
 #include "gui/SliderBank.h"
+#include <vector>
+#include <list>
 
 class LcdLabel;
 class StdComboBox;
@@ -139,11 +141,13 @@ public:
     void timerCallback();
     void sliderValueChanged (Slider* slider);
 	void sliderDragStarted (Slider* slider);
+	void sliderDragEnded (Slider* slider);
 	void mouseDown(const MouseEvent& event);
     KeyboardFocusTraverser* createFocusTraverser();
     void buttonClicked (Button* button);
     void comboBoxChanged (ComboBox* comboBoxThatHasChanged);
     void textEditorTextChanged (TextEditor &t);
+	void textEditorFocusLost (TextEditor &t);
     void addSlider(ext_slider *s) {sliders.add(s);}
     void audioProcessorParameterChanged (AudioProcessor* processor, int parameterIndex, float newValue) { paramHasChanged = true; }
 	void audioProcessorChanged (AudioProcessor* processor) { paramHasChanged = true; }
@@ -302,6 +306,7 @@ private:
     ScopedPointer<Button> sync_nrpn;
     ScopedPointer<Button> sync_sysex;
     ScopedPointer<Button> request;
+    ScopedPointer<Button> undo_button;
 
     ScopedPointer<ComboBox> midi_in_menu;
     ScopedPointer<ComboBox> midi_out_menu;
@@ -325,11 +330,27 @@ private:
     OwnedArray<ext_slider> sliders;
     OwnedArray<ext_combo> boxes;
     OwnedArray<ext_button> buttons;
-	
+
+	// randomizer stuff
 	ScopedPointer<Button> randomizeButton;
 	ScopedPointer<Button> randomizeLockPitchButton;
 	ScopedPointer<MicronSlider>	randomizeAmtSlider;
 	Random randGen;
+
+	// undo/redo stuff
+	struct Snapshot
+	{
+		std::string			progname_value;
+		std::vector<double>	slider_values;
+		std::vector<int>	box_values;
+		std::vector<bool>	button_values;
+	};
+	
+	void takeUndoSnapshot();
+	void restorePreviousUndoSnapshot();
+
+	std::list<Snapshot>	undo_history;
+	bool				allowNewSnapshots;
 };
 
 

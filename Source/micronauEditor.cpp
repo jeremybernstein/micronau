@@ -23,7 +23,9 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
     : AudioProcessorEditor (ownerFilter)
 {
     owner = ownerFilter;
-    
+
+	allowNewSnapshots = true;
+
 	LookAndFeel::setDefaultLookAndFeel( PluginLookAndFeel::getInstance() );
 
 	background = ImageCache::getFromMemory (BinaryData::background_png,
@@ -67,6 +69,9 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
 
 	add_label("request", SYNC_X + 115, SYNC_Y + 13, 65, 15);
 	request = create_guibutton(SYNC_X + 130, SYNC_Y);
+
+	add_label("undo", LOGO_X + 15, LOGO_Y + 78, 35, 15);
+    undo_button = create_guibutton(LOGO_X + 15, LOGO_Y + 65);
 
 	param_display = new LcdLabel("panel", "micronAU\nretroware");
     param_display->setJustificationType (Justification::centredLeft);
@@ -756,6 +761,8 @@ void MicronauAudioProcessorEditor::timerCallback()
     // update gui if any parameters have changed
 	if ((paramHasChanged) || (owner->get_progchange())) {
 		updateGuiComponents();
+		if (owner->get_progchange())
+			takeUndoSnapshot(); // it turns out this will be the initial snapshot
         owner->set_progchange(false);
         paramHasChanged = false;
     }
@@ -826,7 +833,7 @@ void MicronauAudioProcessorEditor::sliderValueChanged (Slider *slider)
 		}
 	}
 	
-	{	// handle generic micron sliders
+	{	// handle generic non-nrpn sliders
 		MicronSlider *s = dynamic_cast<MicronSlider*>( slider );
 		if (s)
 		{
@@ -841,6 +848,12 @@ void MicronauAudioProcessorEditor::sliderDragStarted (Slider* slider)
 	sliderValueChanged(slider);
 }
 
+void MicronauAudioProcessorEditor::sliderDragEnded (Slider* slider)
+{
+	ext_slider *s = dynamic_cast<ext_slider*>( slider );
+	if (s)
+		takeUndoSnapshot();
+}
 
 void MicronauAudioProcessorEditor::buttonClicked (Button* button)
 {
@@ -849,6 +862,8 @@ void MicronauAudioProcessorEditor::buttonClicked (Button* button)
     ext_button *b = dynamic_cast<ext_button*>( button );
 	if (b)
 	{
+		takeUndoSnapshot();
+
         int v = b->getToggleState();
 		b->set_value(v);
 		lcdTextMessage = b->get_name() + "\n" + b->get_txt_value(v);
@@ -874,6 +889,11 @@ void MicronauAudioProcessorEditor::buttonClicked (Button* button)
 	{
 		lcdTextMessage = String("Randomizer\nLock pitch: ") + (button->getToggleState() ? "On" : "Off");
 	}
+	else if (button == undo_button)
+	{
+		restorePreviousUndoSnapshot();
+		lcdTextMessage = "Undo";
+	}
 
 	param_display->setText(lcdTextMessage, dontSendNotification);
 }
@@ -894,6 +914,8 @@ ext_combo* MicronauAudioProcessorEditor::findBoxWithNrpn(int nrpn)
 
 void MicronauAudioProcessorEditor::randomizeParams()
 {
+	allowNewSnapshots = false; // don't generate undo steps for each param modified
+
 	bool lockPitch = randomizeLockPitchButton->getToggleState();
 
 	const float sliderAmt = randomizeAmtSlider->getValue();
@@ -1084,6 +1106,51 @@ void MicronauAudioProcessorEditor::randomizeParams()
 			boxes[i]->setSelectedItemIndex (val, sendNotificationSync);
 		}
 	}
+
+	allowNewSnapshots = true;
+	takeUndoSnapshot();
+}
+
+
+void MicronauAudioProcessorEditor::takeUndoSnapshot()
+{
+	if ( ! allowNewSnapshots )
+		return;
+
+	Snapshot snapshot;
+	
+	snapshot.progname_value = prog_name->getText().toStdString();
+	for (int i = 0; i < sliders.size(); i++)
+		snapshot.slider_values.push_back( sliders[i]->getValue() );
+	for (int i = 0; i < boxes.size(); i++)
+		snapshot.box_values.push_back( boxes[i]->getSelectedItemIndex() );
+	for (int i = 0; i < buttons.size(); i++)
+		snapshot.button_values.push_back( buttons[i]->getToggleState() );
+	
+	undo_history.push_back(snapshot);
+}
+
+void MicronauAudioProcessorEditor::restorePreviousUndoSnapshot()
+{
+	if ( undo_history.size() <= 1 )
+		return; // can't undo past first initial snapshot
+
+	undo_history.pop_back();
+
+	Snapshot& snapshot = undo_history.back();
+	
+	allowNewSnapshots = false; // don't generate more snapshots while restoring current one
+
+	owner->set_prog_name(snapshot.progname_value); // ensure name text box doesn't get clobbered with old data..
+	prog_name->setText(snapshot.progname_value, true); // .. as the text box change notification is async.
+	for (int i = 0; i < sliders.size(); i++)
+		sliders[i]->setValue(snapshot.slider_values[i], sendNotificationSync);
+	for (int i = 0; i < boxes.size(); i++)
+		boxes[i]->setSelectedItemIndex(snapshot.box_values[i], sendNotificationSync);
+	for (int i = 0; i < buttons.size(); i++)
+		buttons[i]->setToggleState(snapshot.button_values[i], sendNotificationSync);
+	
+	allowNewSnapshots = true;
 }
 
 void MicronauAudioProcessorEditor::comboBoxChanged (ComboBox* box)
@@ -1120,6 +1187,8 @@ void MicronauAudioProcessorEditor::comboBoxChanged (ComboBox* box)
         if ((b->get_nrpn() == 631) || (b->get_nrpn() == 632)){
             update_tracking();
         }
+
+		takeUndoSnapshot();
 	}
 
 	updateGuiComponents();
@@ -1153,6 +1222,10 @@ void MicronauAudioProcessorEditor::textEditorTextChanged (TextEditor &t) {
     prog = t.getText();
     
     owner->set_prog_name(prog.substring(0,14));
+}
+
+void MicronauAudioProcessorEditor::textEditorFocusLost (TextEditor &t) {
+	takeUndoSnapshot();
 }
 
 void MicronauAudioProcessorEditor::update_tracking()
