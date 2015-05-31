@@ -103,7 +103,7 @@ void MicronauAudioProcessor::setParameter (int index, float newValue)
     int value = (int) newValue;
    
     // XXX - handle the tracking matrix
-	// if trackging gen preset is modified, switch to custom tracking gen
+	// if tracking gen preset is modified, switch to "custom" tracking gen
     if (param->isTrackingGenValue() && nrpns[index_of_nrpn(631)]->getValue() != 0)
 		setParameter(index_of_nrpn(631), 0);	
 	
@@ -118,7 +118,8 @@ void MicronauAudioProcessor::setParameter (int index, float newValue)
     }
 
     if (param->isFxSelector()) {
-        send_nrpn(param->fxSelectorToNrpn()-512, (int) newValue);
+		// NOTE: must use value instead of newValue, as value has been remapped correctly for fx1 selector
+        send_nrpn(param->fxSelectorToNrpn()-512, value);
 
         // we changed the fx type so update all the corresponding nrpns
         int fxMinNrpn = param->fxMin();
