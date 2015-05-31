@@ -307,6 +307,7 @@ private:
     ScopedPointer<Button> sync_sysex;
     ScopedPointer<Button> request;
     ScopedPointer<Button> undo_button;
+    ScopedPointer<Button> redo_button;
 
     ScopedPointer<ComboBox> midi_in_menu;
     ScopedPointer<ComboBox> midi_out_menu;
@@ -347,9 +348,12 @@ private:
 	};
 	
 	void takeUndoSnapshot();
-	void restorePreviousUndoSnapshot();
+	void restorePreviousUndoSnapshot(bool redo = false);
+	bool canUndo();
+	bool canRedo();
 
 	std::list<Snapshot>	undo_history;
+	std::list<Snapshot>::iterator undo_cur;
 	bool				allowNewSnapshots;
 };
 

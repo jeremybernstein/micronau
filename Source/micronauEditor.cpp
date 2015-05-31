@@ -24,6 +24,7 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
 {
     owner = ownerFilter;
 
+	undo_cur = undo_history.begin();
 	allowNewSnapshots = true;
 
 	LookAndFeel::setDefaultLookAndFeel( PluginLookAndFeel::getInstance() );
@@ -70,8 +71,11 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
 	add_label("request", SYNC_X + 115, SYNC_Y + 13, 65, 15);
 	request = create_guibutton(SYNC_X + 130, SYNC_Y);
 
-	add_label("undo", LOGO_X + 15, LOGO_Y + 78, 35, 15);
-    undo_button = create_guibutton(LOGO_X + 15, LOGO_Y + 65);
+	add_label("undo", LOGO_X - 1, LOGO_Y + 78, 35, 15);
+    undo_button = create_guibutton(LOGO_X - 1, LOGO_Y + 65);
+
+	add_label("redo", LOGO_X + 34, LOGO_Y + 78, 35, 15);
+    redo_button = create_guibutton(LOGO_X + 34, LOGO_Y + 65);
 
 	param_display = new LcdLabel("panel", "micronAU\nretroware");
     param_display->setJustificationType (Justification::centredLeft);
@@ -891,8 +895,27 @@ void MicronauAudioProcessorEditor::buttonClicked (Button* button)
 	}
 	else if (button == undo_button)
 	{
-		restorePreviousUndoSnapshot();
-		lcdTextMessage = "Undo";
+		if ( canUndo() )
+		{
+			restorePreviousUndoSnapshot();
+			lcdTextMessage = "Undo";
+		}
+		else
+		{
+			lcdTextMessage = "Nothing to undo";
+		}
+	}
+	else if (button == redo_button)
+	{
+		if ( canRedo() )
+		{
+			restorePreviousUndoSnapshot(true);
+			lcdTextMessage = "Redo";
+		}
+		else
+		{
+			lcdTextMessage = "Nothing to redo";
+		}
 	}
 
 	param_display->setText(lcdTextMessage, dontSendNotification);
@@ -1126,18 +1149,39 @@ void MicronauAudioProcessorEditor::takeUndoSnapshot()
 		snapshot.box_values.push_back( boxes[i]->getSelectedItemIndex() );
 	for (int i = 0; i < buttons.size(); i++)
 		snapshot.button_values.push_back( buttons[i]->getToggleState() );
-	
+
+	if ( ! undo_history.empty() )
+		undo_history.erase(++undo_cur, undo_history.end());
 	undo_history.push_back(snapshot);
+	undo_cur = --undo_history.end();
 }
 
-void MicronauAudioProcessorEditor::restorePreviousUndoSnapshot()
+
+bool MicronauAudioProcessorEditor::canUndo()
 {
-	if ( undo_history.size() <= 1 )
-		return; // can't undo past first initial snapshot
+	return undo_cur != undo_history.begin();
+}
+bool MicronauAudioProcessorEditor::canRedo()
+{
+	return undo_cur != --undo_history.end();
+}
 
-	undo_history.pop_back();
+void MicronauAudioProcessorEditor::restorePreviousUndoSnapshot(bool redo)
+{
+	if (redo)
+	{
+		if ( ! canRedo() )
+			return; // can't redo past end
+		undo_cur ++;
+	}
+	else // undo
+	{
+		if ( ! canUndo() )
+			return; // can't undo past first initial snapshot
+		undo_cur --;
+	}
 
-	Snapshot& snapshot = undo_history.back();
+	Snapshot& snapshot = *undo_cur;
 	
 	allowNewSnapshots = false; // don't generate more snapshots while restoring current one
 
