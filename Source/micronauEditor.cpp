@@ -55,39 +55,18 @@ MicronauAudioProcessorEditor::MicronauAudioProcessorEditor (MicronauAudioProcess
 	create_lfo(LFO_X, LFO_Y);
 	create_fx_and_tracking_tabs(FX_X,FX_Y);
 
+	create_randomizer(RANDOMIZER_X, RANDOMIZER_Y);
+
 	add_label("sync", SYNC_X, SYNC_Y, 35, 15);
 
 	add_label("nrpn", SYNC_X + 40, SYNC_Y + 13, 35, 15);
+	sync_nrpn = create_guibutton(SYNC_X + 40, SYNC_Y);
 
-	sync_nrpn = new ImageButton();
-	sync_nrpn->setImages (true, true, false,
-						buttonOffImg, 1.0f, Colours::transparentWhite,
-						buttonHoverImg, 1.0f, Colours::transparentWhite,
-						buttonOnImg, 1.0f, Colours::transparentWhite, 0.0f);
-    sync_nrpn->addListener(this);
-    sync_nrpn->setBounds(SYNC_X + 40, SYNC_Y, 35, 15);
-    addAndMakeVisible(sync_nrpn);
-    
 	add_label("sysex", SYNC_X + 85, SYNC_Y + 13, 35, 15);
+    sync_sysex = create_guibutton(SYNC_X + 85, SYNC_Y);
 
-    sync_sysex = new ImageButton();
-	sync_sysex->setImages (true, true, false,
-						buttonOffImg, 1.0f, Colours::transparentWhite,
-						buttonHoverImg, 1.0f, Colours::transparentWhite,
-						buttonOnImg, 1.0f, Colours::transparentWhite, 0.0f);
-    sync_sysex->addListener(this);
-    sync_sysex->setBounds(SYNC_X + 85, SYNC_Y, 35, 15);
-    addAndMakeVisible(sync_sysex);
-    
 	add_label("request", SYNC_X + 115, SYNC_Y + 13, 65, 15);
-	request = new ImageButton();
-	request->setImages (true, true, false,
-                           buttonOffImg, 1.0f, Colours::transparentWhite,
-                           buttonHoverImg, 1.0f, Colours::transparentWhite,
-                           buttonOnImg, 1.0f, Colours::transparentWhite, 0.0f);
-    request->addListener(this);
-    request->setBounds(SYNC_X + 130, SYNC_Y, 35, 15);
-    addAndMakeVisible(request);
+	request = create_guibutton(SYNC_X + 130, SYNC_Y);
 
 	param_display = new LcdLabel("panel", "micronAU\nretroware");
     param_display->setJustificationType (Justification::centredLeft);
@@ -150,6 +129,49 @@ MicronauAudioProcessorEditor::~MicronauAudioProcessorEditor()
 	if (owner)
 		owner->removeListener(this);
 }
+
+Button* MicronauAudioProcessorEditor::create_guibutton(int x, int y, bool wantMicronButton)
+{
+	if (wantMicronButton)
+	{
+		MicronToggleButton* button = new MicronToggleButton("");
+		button->addListener(this);
+		button->setBounds(x, y, 20, 20);
+		addAndMakeVisible(button);
+		return button;
+	}
+	else
+	{
+		ImageButton* button = new ImageButton();
+		button->setImages (true, true, false,
+							buttonOffImg, 1.0f, Colours::transparentWhite,
+							buttonHoverImg, 1.0f, Colours::transparentWhite,
+							buttonOnImg, 1.0f, Colours::transparentWhite, 0.0f);
+		button->addListener(this);
+		button->setBounds(x, y, 35, 15);
+		addAndMakeVisible(button);
+		return button;
+	}
+}
+
+MicronSlider* MicronauAudioProcessorEditor::create_guiknob(int x, int y, const char *text)
+{
+    MicronSlider *s;
+    s = new MicronSlider;
+    s->setSliderStyle (Slider::RotaryHorizontalVerticalDrag);
+
+    if (text) {
+        s->setTextBoxStyle(Slider::TextBoxBelow, true, 40, 15);
+        s->setLabel(text);
+    }
+
+    s->addListener (this);
+    s->setBounds(x, y, 40, 40);
+	addAndMakeVisible(s);
+	
+	return s;
+}
+
 
 void MicronauAudioProcessorEditor::add_knob(int nprn, int x, int y, const char *text, Component *parent = NULL) {
     ext_slider *s;
@@ -267,7 +289,7 @@ void MicronauAudioProcessorEditor::create_mod(int x, int y)
         c->setBounds(x, y, 700, 100);
     }
 
-	mod_tabs = new MicronTabBar(TabbedButtonBar::TabsAtTop);
+	mod_tabs = new MicronTabBar(TabbedButtonBar::TabsAtBottom);
 
 	mod_tabs->setTabBarDepth (42);
 	mod_tabs->setTabBarMargins(25, 0);
@@ -518,6 +540,27 @@ void MicronauAudioProcessorEditor::create_lfo(int x, int y)
     add_box(628, x, y+200, 60, "input", 0);
 }
 
+void MicronauAudioProcessorEditor::create_randomizer(int x, int y)
+{
+	add_group_box("randomize", x, y, RANDOMIZER_W, RANDOMIZER_H);
+
+	add_label("randomize", x, y + 47, 70, 15);
+	randomizeButton = create_guibutton(x + 68, y+47);
+
+	x += 3;
+	y += 3;
+
+	add_label("lock pitch", x+54, y-5, 50, 15);
+	randomizeLockPitchButton = create_guibutton(x+71, y+7, true);
+
+	randomizeAmtSlider = create_guiknob(x + 2, y, "amt");
+	randomizeAmtSlider->setRange(0.0f, 1.0f);
+	randomizeAmtSlider->setValue(0.2f, dontSendNotification);
+	randomizeAmtSlider->setDoubleClickReturnValue(true, 0.2f);
+	randomizeAmtSlider->setMouseDragSensitivity( 100.0f );
+}
+
+
 void MicronauAudioProcessorEditor::create_fx_and_tracking_tabs(int x, int y)
 {
 	add_group_box("fx/tracking", x, y, FX_W, FX_H);
@@ -531,7 +574,7 @@ void MicronauAudioProcessorEditor::create_fx_and_tracking_tabs(int x, int y)
 	create_tracking(0, 0, trackingTab);
 
 	fx_and_tracking_tabs = new MicronTabBar(TabbedButtonBar::TabsAtBottom);
-	fx_and_tracking_tabs->setTabBarMargins(10,3, 0,-9);
+	fx_and_tracking_tabs->setTabBarMargins(10,3);
 	fx_and_tracking_tabs->setTabBarDepth (45);
 
 	fx_and_tracking_tabs->addTab ("fx1", Colour (0x00d3d3d3), fx1Tab, true);
@@ -578,12 +621,12 @@ void MicronauAudioProcessorEditor::create_fx1(int x, int y, Component* parent)
 			}
 			add_knob(846 + (idx * 10), offsX + 310 + o, 40, "rate", c);
 			add_knob(847 + (idx * 10), offsX + 310 + 40 + o, 40, "depth", c);
-			add_box(848 + (idx * 10), offsX + 395 + o, 43, 40, "shape", 1, c);
-			add_box(851 + (idx * 10), offsX + 335 + o, 15, 60, "sync", 2, c);
+			add_box(848 + (idx * 10), offsX + 395 + o, 43, 45, "shape", 1, c);
+			add_box(851 + (idx * 10), offsX + 340 + o, 15, 60, "sync", 2, c);
 			if (idx == 0) {
-				add_button(850, offsX + 400 + o, 14, NULL, true, c);
+				add_button(850, offsX + 405 + o, 14, NULL, true, c);
 			} else {
-				add_button(849 + (idx * 10), offsX + 400 + o, 14, NULL, true, c);
+				add_button(849 + (idx * 10), offsX + 405 + o, 14, NULL, true, c);
 			}
 
         } else {
@@ -774,11 +817,22 @@ void MicronauAudioProcessorEditor::update_midi_menu(int in_out, bool init)
 
 void MicronauAudioProcessorEditor::sliderValueChanged (Slider *slider)
 {
-    ext_slider *s = dynamic_cast<ext_slider*>( slider );
-	if (s)
-	{
-		s->set_value(s->getValue());
-		param_display->setText(s->get_name() + "\n" + s->get_txt_value(s->getValue()), dontSendNotification);
+	{	// handle nrpn editing sliders
+		ext_slider *s = dynamic_cast<ext_slider*>( slider );
+		if (s)
+		{
+			s->set_value(s->getValue());
+			param_display->setText(s->get_name() + "\n" + s->get_txt_value(s->getValue()), dontSendNotification);
+		}
+	}
+	
+	{	// handle generic micron sliders
+		MicronSlider *s = dynamic_cast<MicronSlider*>( slider );
+		if (s)
+		{
+			if (s == randomizeAmtSlider)
+				param_display->setText(String("Randomizer Amt\n") + String(s->getValue()), dontSendNotification);
+		}
 	}
 }
 
@@ -790,28 +844,247 @@ void MicronauAudioProcessorEditor::sliderDragStarted (Slider* slider)
 
 void MicronauAudioProcessorEditor::buttonClicked (Button* button)
 {
-    if (button == sync_nrpn) {
-        owner->sync_via_nrpn();
-        return;
-    }
-    if (button == sync_sysex) {
-        owner->sync_via_sysex();
-        return;
-    }
-    if (button == request) {
-        owner->send_request();
-        return;
-    }
+	String lcdTextMessage;
 
     ext_button *b = dynamic_cast<ext_button*>( button );
 	if (b)
 	{
         int v = b->getToggleState();
 		b->set_value(v);
-		param_display->setText(b->get_name() + "\n" + b->get_txt_value(v), dontSendNotification);
+		lcdTextMessage = b->get_name() + "\n" + b->get_txt_value(v);
 	}
+	else if (button == sync_nrpn) {
+        owner->sync_via_nrpn();
+		lcdTextMessage = "Sync prgm nrpn\nDone";
+    }
+    else if (button == sync_sysex) {
+        owner->sync_via_sysex();
+		lcdTextMessage = "Sync prgm sysex\nDone";
+    }
+    else if (button == request) {
+        owner->send_request();
+		lcdTextMessage = "Send prgm request\nDone";
+    }
+	else if (button == randomizeButton)
+	{
+		randomizeParams();
+		lcdTextMessage = "Randomize\nDone";
+	}
+	else if (button == randomizeLockPitchButton)
+	{
+		lcdTextMessage = String("Randomizer\nLock pitch: ") + (button->getToggleState() ? "On" : "Off");
+	}
+
+	param_display->setText(lcdTextMessage, dontSendNotification);
 }
 
+ext_combo* MicronauAudioProcessorEditor::findBoxWithNrpn(int nrpn)
+{
+	ext_combo* box = 0;
+	for (int j = 0; j < boxes.size(); j++)
+	{
+		if (boxes[j]->get_nrpn() == nrpn)
+		{
+			box = boxes[j];
+			break;
+		}
+	}
+	return box;
+}
+
+void MicronauAudioProcessorEditor::randomizeParams()
+{
+	bool lockPitch = randomizeLockPitchButton->getToggleState();
+
+	const float sliderAmt = randomizeAmtSlider->getValue();
+
+	// make random adjustments to the knob values, with a few tweaks/hacks to tend more toward viable sounds
+	for (int i = 0; i < sliders.size(); i++) {
+		const float curVal = (sliders[i]->get_value() - sliders[i]->getMinimum()) / (sliders[i]->getMaximum() - sliders[i]->getMinimum());
+
+		float amt = 0.5f * sliderAmt;
+		float defaultsBiasAmt = 0.8f*sliderAmt; // bias some/all params toward their default value by some strength level
+	
+		float defaultVal = 0.5f; // using halfway point as default value to bias toward
+		float randOffset = 2.0f * randGen.nextFloat() - 1.0f;
+
+		switch (sliders[i]->getInternalParam()->getNrpn())
+		{
+			case 576: // program level
+				amt *= 0.5f; // less movement
+				randOffset *= 0.5f; // less movement
+				defaultVal = 0.75f; // bias toward a higher setting
+				break;
+
+			case 578: // env1 attack
+				defaultVal = 0.3f; // bias toward a lower setting
+				amt *= 0.7f; // less movement
+				break;
+
+			case 582: // env1 sustain time
+				defaultVal = 1.0f; // bias toward a higher setting
+				amt *= 0.7f; // less movement
+				defaultsBiasAmt = 0.5f + 0.5f * sliderAmt; // stronger bias toward default
+				break;
+
+			case 583: // env1 sustain level
+				defaultVal = 0.8f; // bias toward a higher setting
+				amt *= 0.7f; // less movement
+				break;
+
+			case 584: // env1 release time
+				defaultVal = 0.6f; // bias toward a higher setting
+				amt *= 0.7f; // less movement
+				break;
+
+			case 517: // porta time
+				defaultVal = 0.1f; // bias toward a lower setting
+				amt *= 0.7f; // less movement
+				break;
+			
+			case 526: // osc1 pitch semi
+			case 532: // osc2 pitch semi
+			case 538: // osc3 pitch semi
+				if (lockPitch)
+					continue; // skip changing osc semitone altogether to help preserve tonality of voice
+
+			case 514: // unison detune
+			case 519: // analog drift
+				defaultVal = 0.0f; // bias toward a lower setting
+				if (lockPitch)
+				{
+					amt *= 0.7f; // less movement
+					defaultsBiasAmt = 0.5f + 0.5f * sliderAmt; // stronger bias toward default
+				}
+				break;
+
+			case 527: // osc1 pitch fine
+			case 533: // osc2 pitch fine
+			case 539: // osc3 pitch fine
+				if (lockPitch)
+				{	// resist excessive osc detuning, may help preserve tonality of voice
+					amt *= 0.5f; // less movement
+					randOffset *= 0.5f; // less movement
+					defaultsBiasAmt = 0.5f + 0.5f * sliderAmt; // stronger bias toward default
+				}
+				break;
+
+			default:
+				// constrain some mod matrix levels and offsets
+				if ( sliders[i]->getInternalParam()->isModLevel() || sliders[i]->getInternalParam()->isModOffset() )
+				{
+					// find box containing dest param associated with current knob
+					int associatedModDestNrpn = (sliders[i]->getInternalParam()->getNrpn() & 0xfffc) + 1;
+					const ext_combo* box = findBoxWithNrpn(associatedModDestNrpn);
+
+					if (box)
+					{
+						String boxString = box->getItemText(box->getSelectedItemIndex());
+						if ( lockPitch && boxString.contains("Nar") )
+						{	// constrain narrow pitch values
+							amt *= 0.25f; // less movement
+							randOffset *= 0.5f; // less movement
+							defaultsBiasAmt = 1.0f; // strong bias toward default
+						}
+						else if ( lockPitch && boxString.contains("Pit") )
+						{	// constrain broad range pitch values even more
+							amt *= 0.1f; // less movement
+							randOffset *= 0.1f; // less movement
+							defaultsBiasAmt = 1.0f; // strong bias toward default
+						}
+						else if ( boxString.contains("PgmLvl") )
+						{	// constrain pgmlevel values
+							amt *= 0.5f; // less movement
+							randOffset *= 0.5f; // less movement
+							defaultsBiasAmt = 1.0f; // strong bias toward default
+						}
+						else if ( boxString.contains("Pan") )
+						{
+							amt *= 0.5f; // less movement
+							defaultsBiasAmt = 0.5f + 0.5f * sliderAmt; // stronger bias toward default
+						}
+					}
+				}
+				break;
+		}
+		
+		const float targetVal = ((1.0f-defaultsBiasAmt)*curVal + defaultsBiasAmt*defaultVal) + randOffset;
+		const float finalMixedValue = ( (1.0f-amt) * curVal + amt * targetVal );
+		double val = sliders[i]->getMinimum() + (sliders[i]->getMaximum() - sliders[i]->getMinimum()) * finalMixedValue;
+		sliders[i]->setValue(val, sendNotificationSync);
+	}
+
+	// also modify combo box values if we are applying a large amount of randomization
+	if (sliderAmt > 0.5f)
+	{
+		for (int i = 0; i < boxes.size(); i++) {
+			const float curVal = ((float)boxes[i]->indexOfItemId(boxes[i]->getSelectedId())) / boxes[i]->getNumItems();
+
+			float amt = 2.0f * (sliderAmt-0.5f);
+			amt *= amt;
+			float defaultsBiasAmt = 0.25f * amt; // bias some/all params toward their default value by some strength level
+			amt *= 0.5f;
+		
+			float defaultVal = 0.5f; // using halfway point as default value to bias toward
+			float randOffset = 2.0f * randGen.nextFloat() - 1.0f;
+			
+			// treat some combo boxes differently
+			const int nrpn = boxes[i]->getInternalParam()->getNrpn();
+			if (boxes[i]->getInternalParam()->isMatrixSource() ||
+				nrpn == 628 || /* S/H input */
+				nrpn == 630 ) /* trackgen input */
+			{
+				amt *= 0.4f; // less movement
+				randOffset *= 0.4f; // less movement
+				defaultVal = 0.0f; // bias toward a lower setting, avoid the CCs more or less
+				defaultsBiasAmt *= 1.5f;
+			}
+			else if (boxes[i]->getInternalParam()->isMatrixDest())
+			{
+//				amt *= 0.5f; // less movement
+				randOffset *= 0.5f; // less movement
+			}
+			else if (nrpn == 523 || /* osc 1 waveform */
+					nrpn == 529 || /* osc 2 waveform */
+					nrpn == 535) /* osc 3 waveform */
+			{
+				amt *= 2.0f; // more movement
+				randOffset *= 2.0f;
+			}
+			else if (nrpn == 589 || /* env 1 loop */
+					nrpn == 588) /* env 1 freerun */
+			{
+				amt *= 0.5f; // less movement
+//				randOffset *= 0.5f; // less movement
+			}
+			else if (nrpn == 100 || /* program */
+					nrpn == 101 || /* bank */
+					nrpn == 666 || /* category */
+					nrpn == 411 || /* knob x */
+					nrpn == 412 || /* knob y */
+					nrpn == 413 ) /* knob z */
+			{
+				continue;
+			}
+			
+			const float targetVal = ((1.0f-defaultsBiasAmt)*curVal + defaultsBiasAmt*defaultVal) + randOffset;
+			const float finalMixedValue = ( (1.0f-amt) * curVal + amt * targetVal );
+			int val = round( finalMixedValue * boxes[i]->getNumItems() );
+			if (val < 0)
+				val = 0;
+			if ( boxes[i]->getInternalParam()->isMatrixSource() || boxes[i]->getInternalParam()->isMatrixDest() )
+			{
+				if (val < 1)
+					val = 1; // don't set any matrix src or dst to None (first item)
+				if (boxes[i]->getSelectedItemIndex() == 0)
+					continue; // slot was already set to None (first item), do not change it
+			}
+			if (val > boxes[i]->getNumItems()-1)
+				val = boxes[i]->getNumItems()-1;
+			boxes[i]->setSelectedItemIndex (val, sendNotificationSync);
+		}
+	}
+}
 
 void MicronauAudioProcessorEditor::comboBoxChanged (ComboBox* box)
 {

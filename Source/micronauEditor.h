@@ -42,7 +42,8 @@ public:
             setMouseDragSensitivity( 20.0*(4.0+log10(newMax - newMin)) );
     }
 //    void mouseDoubleClick(const MouseEvent& event);
-    
+	const IonSysexParam* getInternalParam() { return param; }
+	
 private:
     IonSysexParam *param;
     MicronauAudioProcessor *plugin;
@@ -78,7 +79,8 @@ public:
     const String get_name () { return param->getName();}
     const String get_txt_value (int v) { return param->getConvertedValue(v);}
     vector<ListItemParameter> & get_list_item_names() {return param->getList();}
-    
+	const IonSysexParam* getInternalParam() { return param; }
+
 private:
     IonSysexParam *param;
     MicronauAudioProcessor *plugin;
@@ -239,11 +241,11 @@ private:
 		OUTPUT_W = XYZ_W,
 		OUTPUT_H = 135,
 
-		TRACKING_X = 930,
-		TRACKING_Y = OUTPUT_Y + 160,
-		TRACKING_W = 120,
-		TRACKING_H = 70,
-        
+		RANDOMIZER_X = 930,
+		RANDOMIZER_Y = OUTPUT_Y + 160,
+		RANDOMIZER_W = 120,
+		RANDOMIZER_H = 70,
+
         FX_X = ENVS_X,
         FX_Y = ENVS_Y + 245,
         FX_W = 440,
@@ -253,9 +255,12 @@ private:
     void add_knob(int nrpn, int x, int y, const char *text, Component *parent);
     void add_box(int nprn, int x, int y, int width, const char *text, int loc, Component *parent);
     void add_button(int nrpn, int x, int y, const char *text, bool invert, Component *parent);
-    
+
 	void add_group_box(const String& labelText, int x, int y, int w, int h);
 	void add_label(const String& labelText, int x, int y, int w, int h);
+
+	Button* create_guibutton(int x, int y, bool wantMicronButton = false); // create a gui button not associated with an nrpn
+	MicronSlider* create_guiknob(int x, int y, const char *text); // create a gui knob not associated with an nrpn
 
     void create_osc(int x, int y);
     void create_prefilt(int x, int y);
@@ -274,11 +279,16 @@ private:
     void create_fx2(int x, int y, Component* parent);
 	void create_tracking(int x, int y, Component* parent);
 
+	void create_randomizer(int x, int y);
+	void randomizeParams();
+
 	void updateGuiComponents();
     void update_tracking();
     void update_midi_menu(int in_out, bool init);
 
     void select_item_by_name(int in_out, String nm);
+
+	ext_combo* findBoxWithNrpn(int nrpn);
 
 	Image background;
 	Image buttonOffImg;
@@ -289,9 +299,9 @@ private:
     ScopedPointer<LookAndFeel> inverted_button_lf;
     OwnedArray<GroupComponent> group_boxes;
 
-    ScopedPointer<ImageButton> sync_nrpn;
-    ScopedPointer<ImageButton> sync_sysex;
-    ScopedPointer<ImageButton> request;
+    ScopedPointer<Button> sync_nrpn;
+    ScopedPointer<Button> sync_sysex;
+    ScopedPointer<Button> request;
 
     ScopedPointer<ComboBox> midi_in_menu;
     ScopedPointer<ComboBox> midi_out_menu;
@@ -315,6 +325,11 @@ private:
     OwnedArray<ext_slider> sliders;
     OwnedArray<ext_combo> boxes;
     OwnedArray<ext_button> buttons;
+	
+	ScopedPointer<Button> randomizeButton;
+	ScopedPointer<Button> randomizeLockPitchButton;
+	ScopedPointer<MicronSlider>	randomizeAmtSlider;
+	Random randGen;
 };
 
 

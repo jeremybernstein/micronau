@@ -25,7 +25,7 @@ public:
     explicit MicronTabBar (TabbedButtonBar::Orientation orientation);
 
 	void setTabBarDepth (int newDepth);
-	void setTabBarMargins (int newMarginVertical, int newMarginLeft, int tweakX = 0, int tweakY = 0);
+	void setTabBarMargins (int newMarginVertical, int newMarginLeft);
 
 	// NOTE: not using sendChangeMessage, only there for compatibility with TabbedComponent interface.
     void setCurrentTabIndex (int newTabIndex, bool sendChangeMessage = true);
@@ -62,8 +62,6 @@ private:
 	int tabBarDepth;
 	int tabBarMarginVertical;
 	int tabBarMarginLeft;
-	int tabsTweakX;
-	int tabsTweakY;
 
 	Image buttonOffImg;
 	Image buttonHoverImg;

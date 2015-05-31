@@ -15,7 +15,7 @@
 MicronTabBar::MicronTabBar (TabbedButtonBar::Orientation orientation) :
 								curTabIndex(INVALID_TAB_INX),
 								labelOrientation(orientation),
-								tabBarDepth(65), tabBarMarginVertical(30), tabBarMarginLeft(0), tabsTweakX(0), tabsTweakY(0)
+								tabBarDepth(65), tabBarMarginVertical(30), tabBarMarginLeft(0)
 {
     buttonOffImg = ImageCache::getFromMemory (BinaryData::led_button_off_png,
                                            BinaryData::led_button_off_pngSize);
@@ -53,12 +53,10 @@ void MicronTabBar::setTabBarDepth (int newDepth)
 	resized();
 }
 
-void MicronTabBar::setTabBarMargins (int newMarginVertical, int newMarginLeft, int tweakX, int tweakY)
+void MicronTabBar::setTabBarMargins (int newMarginVertical, int newMarginLeft)
 {
 	tabBarMarginVertical = newMarginVertical;
 	tabBarMarginLeft = newMarginLeft;
-	tabsTweakX = tweakX;
-	tabsTweakY = tweakY;
 	resized();
 }
 
@@ -86,9 +84,10 @@ void MicronTabBar::resized()
 		
 	case TabbedButtonBar::TabsAtBottom: // place labels below buttons
 		tabHeight = 15;
+		buttonsOffsetY = -0.5f*tabHeight;
 		buttonsX = 7;
 //		labelsX = -7;
-		labelsOffsetY = 14;
+		labelsOffsetY = 14 + buttonsOffsetY;
 		labelsJustification = Justification::centredTop;
 		break;
 
@@ -109,10 +108,6 @@ void MicronTabBar::resized()
 	const int tabSpacing = (numTabs <= 1) ? 0 : (getHeight() - 2.0f*tabBarMarginVertical - tabHeight) / (numTabs-1);
 
 	int curTabPos = 0.5f*getHeight() - 0.5f*tabSpacing*(numTabs-1) - 0.5f*tabHeight;
-
-	labelsX += tabsTweakX;
-	buttonsX += tabsTweakX;
-	curTabPos += tabsTweakY;
 
 	// layout all the labels, buttons, and content components
 	for (int tabInx = 0; tabInx < numTabs; ++tabInx)

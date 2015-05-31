@@ -276,7 +276,7 @@ void IonSysexParam::setParamName(const char *str)
 String IonSysexParam::getConvertedValue(SInt32 val)
 {
     char buf[128];
-	val = m_value + m_cntrlOffset;
+	val = getValue() + m_cntrlOffset;
 	if (getList().size() != 0) {
 		return String(getList()[val].getName());
 	}
@@ -833,7 +833,7 @@ int IonSysexParam::getCntrlOffset()
 	return m_cntrlOffset;
 }
 
-int IonSysexParam::getNrpn() 
+int IonSysexParam::getNrpn() const
 { 
     return m_nrpn; 
 }
@@ -854,15 +854,31 @@ bool IonSysexParam::hasNrpn()
     return (m_nrpn > 0 ? true : false); 
 }
 
-bool IonSysexParam::isFxSelector() {
+bool IonSysexParam::isFxSelector() const {
 	if ((m_nrpn == FX1_SELECTOR) || (m_nrpn == FX2_SELECTOR)) {
 		return true;
 	}
 	return false;
 }
 
-bool IonSysexParam::isTrackingGenValue(){
+bool IonSysexParam::isTrackingGenValue() const {
 	return (m_nrpn >= 633 && m_nrpn <= 633+32);
+}
+
+bool IonSysexParam::isMatrixSource() const {
+	return (m_nrpn >= 692 && m_nrpn <= 736 && (m_nrpn & 0x3) == 0x0);
+}
+
+bool IonSysexParam::isMatrixDest() const {
+	return (m_nrpn >= 693 && m_nrpn <= 737 && (m_nrpn & 0x3) == 0x1);
+}
+
+bool IonSysexParam::isModLevel() const {
+	return (m_nrpn >= 694 && m_nrpn <= 738 && (m_nrpn & 0x3) == 0x2);
+}
+
+bool IonSysexParam::isModOffset() const {
+	return (m_nrpn >= 695 && m_nrpn <= 739 && (m_nrpn & 0x3) == 0x3);
 }
 
 SInt32 IonSysexParam::fxSelectorToNrpn() {

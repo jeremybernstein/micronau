@@ -142,11 +142,15 @@ class IonSysexParam {
 
       int getMin() { return m_min - m_cntrlOffset; };
       int getMax() { return m_max - m_cntrlOffset; };
-      int getNrpn();
+      int getNrpn() const;
 	  int getCntrlOffset();
 	  bool hasNrpn();
-      bool isFxSelector();
-	  bool isTrackingGenValue();
+      bool isFxSelector() const;
+	  bool isTrackingGenValue() const;
+	  bool isMatrixSource() const;
+	  bool isMatrixDest() const;
+	  bool isModLevel() const;
+	  bool isModOffset() const;
 	  SInt32 fxSelectorToNrpn();
 	  SInt32 fxMin();
 	  SInt32 fxMax();
