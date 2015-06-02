@@ -323,7 +323,7 @@ private:
 	ScopedPointer<MicronTabBar> fx_and_tracking_tabs;
     ScopedPointer<Component> fx1[7];
     ScopedPointer<Component> fx2[7];
-	SliderBank* trackgen;
+	ScopedPointer<SliderBank> trackgen;
 
 	OwnedArray<Label> labelComponents;
 
