@@ -579,7 +579,7 @@ void ComboBox::mouseUp (const MouseEvent& e2)
 
 void ComboBox::mouseWheelMove (const MouseEvent& e, const MouseWheelDetails& wheel)
 {
-   #if 0
+   #if 1
     // NB: this is far too irritating if enabled, because on scrollable pages containing
     // comboboxes (e.g. introjucer settings pages), you can easily nudge them when trying to scroll
     if (! menuActive && wheel.deltaY != 0)
