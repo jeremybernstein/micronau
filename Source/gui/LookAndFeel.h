@@ -18,7 +18,7 @@
 		LookAndFeel subclass to give components their customized appearance for micronAU.
 */
 
-class PluginLookAndFeel : public LookAndFeel, public DeletedAtShutdown
+class PluginLookAndFeel : public LookAndFeel_V3, public DeletedAtShutdown
 {
 public:
 	juce_DeclareSingleton (PluginLookAndFeel, false);
@@ -49,7 +49,7 @@ public:
 	void drawTextEditorOutline (Graphics& g, int width, int height, TextEditor& textEditor);
 
 private:
-	LookAndFeel stdLookAndFeel; // for falling back on the standard look and feel when needed.
+	LookAndFeel_V3 stdLookAndFeel; // for falling back on the standard look and feel when needed.
 
     Image blackKnob;
     Image blackKnobMarker;
@@ -59,7 +59,7 @@ private:
 	Image lcdPanel;
 };
 
-class InvertedButtonLookAndFeel : public LookAndFeel, public DeletedAtShutdown
+class InvertedButtonLookAndFeel : public LookAndFeel_V3, public DeletedAtShutdown
 {
 public:
     InvertedButtonLookAndFeel();

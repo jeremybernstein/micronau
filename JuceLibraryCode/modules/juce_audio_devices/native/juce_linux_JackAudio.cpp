@@ -2,27 +2,27 @@
   ==============================================================================
 
    This file is part of the JUCE library.
-   Copyright (c) 2013 - Raw Material Software Ltd.
+   Copyright (c) 2017 - ROLI Ltd.
 
-   Permission is granted to use this software under the terms of either:
-   a) the GPL v2 (or any later version)
-   b) the Affero GPL v3
+   JUCE is an open source library subject to commercial or open-source
+   licensing.
 
-   Details of these licenses can be found at: www.gnu.org/licenses
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   JUCE is distributed in the hope that it will be useful, but WITHOUT ANY
-   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-   A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-   ------------------------------------------------------------------------------
-
-   To release a closed-source product which uses JUCE, commercial licenses are
-   available: visit www.juce.com for more information.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
 
-//==============================================================================
+namespace juce
+{
+
 static void* juce_libjackHandle = nullptr;
 
 static void* juce_loadJackFunction (const char* const name)
@@ -69,6 +69,7 @@ JUCE_DECL_JACK_FUNCTION (void*, jack_set_port_connect_callback, (jack_client_t* 
 JUCE_DECL_JACK_FUNCTION (jack_port_t* , jack_port_by_id, (jack_client_t* client, jack_port_id_t port_id), (client, port_id));
 JUCE_DECL_JACK_FUNCTION (int, jack_port_connected, (const jack_port_t* port), (port));
 JUCE_DECL_JACK_FUNCTION (int, jack_port_connected_to, (const jack_port_t* port, const char* port_name), (port, port_name));
+JUCE_DECL_JACK_FUNCTION (int, jack_set_xrun_callback, (jack_client_t* client, JackXRunCallback xrun_callback, void* arg), (client, xrun_callback, arg));
 
 #if JUCE_DEBUG
  #define JACK_LOGGING_ENABLED 1
@@ -183,7 +184,7 @@ public:
 
             // open output ports
             const StringArray outputChannels (getOutputChannelNames());
-            for (int i = 0; i < outputChannels.size (); ++i)
+            for (int i = 0; i < outputChannels.size(); ++i)
             {
                 String outputName;
                 outputName << "out_" << ++totalNumberOfOutputChannels;
@@ -218,16 +219,36 @@ public:
         return names;
     }
 
-    StringArray getOutputChannelNames()         { return getChannelNames (false); }
-    StringArray getInputChannelNames()          { return getChannelNames (true); }
-    int getNumSampleRates()                     { return client != nullptr ? 1 : 0; }
-    double getSampleRate (int /*index*/)        { return client != nullptr ? juce::jack_get_sample_rate (client) : 0; }
-    int getNumBufferSizesAvailable()            { return client != nullptr ? 1 : 0; }
-    int getBufferSizeSamples (int /*index*/)    { return getDefaultBufferSize(); }
-    int getDefaultBufferSize()                  { return client != nullptr ? juce::jack_get_buffer_size (client) : 0; }
+    StringArray getOutputChannelNames() override         { return getChannelNames (false); }
+    StringArray getInputChannelNames() override          { return getChannelNames (true); }
+
+    Array<double> getAvailableSampleRates() override
+    {
+        Array<double> rates;
+
+        if (client != nullptr)
+            rates.add (juce::jack_get_sample_rate (client));
+
+        return rates;
+    }
+
+    Array<int> getAvailableBufferSizes() override
+    {
+        Array<int> sizes;
+
+        if (client != nullptr)
+            sizes.add (juce::jack_get_buffer_size (client));
+
+        return sizes;
+    }
+
+    int getDefaultBufferSize() override             { return getCurrentBufferSizeSamples(); }
+    int getCurrentBufferSizeSamples() override      { return client != nullptr ? juce::jack_get_buffer_size (client) : 0; }
+    double getCurrentSampleRate() override          { return client != nullptr ? juce::jack_get_sample_rate (client) : 0; }
+
 
     String open (const BigInteger& inputChannels, const BigInteger& outputChannels,
-                 double /* sampleRate */, int /* bufferSizeSamples */)
+                 double /* sampleRate */, int /* bufferSizeSamples */) override
     {
         if (client == nullptr)
         {
@@ -235,12 +256,14 @@ public:
             return lastError;
         }
 
-        lastError = String::empty;
+        lastError.clear();
         close();
 
+        xruns = 0;
         juce::jack_set_process_callback (client, processCallback, this);
         juce::jack_set_port_connect_callback (client, portConnectCallback, this);
         juce::jack_on_shutdown (client, shutdownCallback, this);
+        juce::jack_set_xrun_callback (client, xrunCallback, this);
         juce::jack_activate (client);
         deviceIsOpen = true;
 
@@ -270,16 +293,20 @@ public:
             }
         }
 
+        updateActivePorts();
+
         return lastError;
     }
 
-    void close()
+    void close() override
     {
         stop();
 
         if (client != nullptr)
         {
             juce::jack_deactivate (client);
+
+            juce::jack_set_xrun_callback (client, xrunCallback, nullptr);
             juce::jack_set_process_callback (client, processCallback, nullptr);
             juce::jack_set_port_connect_callback (client, portConnectCallback, nullptr);
             juce::jack_on_shutdown (client, shutdownCallback, nullptr);
@@ -288,7 +315,7 @@ public:
         deviceIsOpen = false;
     }
 
-    void start (AudioIODeviceCallback* newCallback)
+    void start (AudioIODeviceCallback* newCallback) override
     {
         if (deviceIsOpen && newCallback != callback)
         {
@@ -307,22 +334,21 @@ public:
         }
     }
 
-    void stop()
+    void stop() override
     {
         start (nullptr);
     }
 
-    bool isOpen()                           { return deviceIsOpen; }
-    bool isPlaying()                        { return callback != nullptr; }
-    int getCurrentBufferSizeSamples()       { return getBufferSizeSamples (0); }
-    double getCurrentSampleRate()           { return getSampleRate (0); }
-    int getCurrentBitDepth()                { return 32; }
-    String getLastError()                   { return lastError; }
+    bool isOpen() override                           { return deviceIsOpen; }
+    bool isPlaying() override                        { return callback != nullptr; }
+    int getCurrentBitDepth() override                { return 32; }
+    String getLastError() override                   { return lastError; }
+    int getXRunCount() const noexcept override       { return xruns; }
 
-    BigInteger getActiveOutputChannels() const { return activeOutputChannels; }
-    BigInteger getActiveInputChannels()  const { return activeInputChannels;  }
+    BigInteger getActiveOutputChannels() const override  { return activeOutputChannels; }
+    BigInteger getActiveInputChannels()  const override  { return activeInputChannels;  }
 
-    int getOutputLatencyInSamples()
+    int getOutputLatencyInSamples() override
     {
         int latency = 0;
 
@@ -332,7 +358,7 @@ public:
         return latency;
     }
 
-    int getInputLatencyInSamples()
+    int getInputLatencyInSamples() override
     {
         int latency = 0;
 
@@ -370,7 +396,7 @@ private:
         if (callback != nullptr)
         {
             if ((numActiveInChans + numActiveOutChans) > 0)
-                callback->audioDeviceIOCallback (const_cast <const float**> (inChans.getData()), numActiveInChans,
+                callback->audioDeviceIOCallback (const_cast<const float**> (inChans.getData()), numActiveInChans,
                                                  outChans, numActiveOutChans, numSamples);
         }
         else
@@ -384,6 +410,14 @@ private:
     {
         if (callbackArgument != nullptr)
             ((JackAudioIODevice*) callbackArgument)->process (nframes);
+
+        return 0;
+    }
+
+    static int xrunCallback (void* callbackArgument)
+    {
+        if (callbackArgument != nullptr)
+            ((JackAudioIODevice*) callbackArgument)->xruns++;
 
         return 0;
     }
@@ -419,7 +453,7 @@ private:
 
     static void portConnectCallback (jack_port_id_t, jack_port_id_t, int, void* arg)
     {
-        if (JackAudioIODevice* device = static_cast <JackAudioIODevice*> (arg))
+        if (JackAudioIODevice* device = static_cast<JackAudioIODevice*> (arg))
             device->updateActivePorts();
     }
 
@@ -452,11 +486,13 @@ private:
     AudioIODeviceCallback* callback;
     CriticalSection callbackLock;
 
-    HeapBlock <float*> inChans, outChans;
+    HeapBlock<float*> inChans, outChans;
     int totalNumberOfInputChannels;
     int totalNumberOfOutputChannels;
     Array<void*> inputPorts, outputPorts;
     BigInteger activeInputChannels, activeOutputChannels;
+
+    int xruns;
 };
 
 
@@ -484,13 +520,9 @@ public:
         outputNames.clear();
         outputIds.clear();
 
-        if (juce_libjackHandle == nullptr)
-        {
-            juce_libjackHandle = dlopen ("libjack.so", RTLD_LAZY);
-
-            if (juce_libjackHandle == nullptr)
-                return;
-        }
+        if (juce_libjackHandle == nullptr)  juce_libjackHandle = dlopen ("libjack.so.0", RTLD_LAZY);
+        if (juce_libjackHandle == nullptr)  juce_libjackHandle = dlopen ("libjack.so",   RTLD_LAZY);
+        if (juce_libjackHandle == nullptr)  return;
 
         jack_status_t status;
 
@@ -543,7 +575,7 @@ public:
     {
         jassert (hasScanned); // need to call scanForDevices() before doing this
 
-        if (JackAudioIODevice* d = dynamic_cast <JackAudioIODevice*> (device))
+        if (JackAudioIODevice* d = dynamic_cast<JackAudioIODevice*> (device))
             return asInput ? inputIds.indexOf (d->inputId)
                            : outputIds.indexOf (d->outputId);
 
@@ -588,3 +620,5 @@ AudioIODeviceType* AudioIODeviceType::createAudioIODeviceType_JACK()
 {
     return new JackAudioIODeviceType();
 }
+
+} // namespace juce

@@ -36,7 +36,7 @@ class LcdComboBox;
                                                                     //[/Comments]
 */
 class Fx2Panel  : public Component,
-                  public ComboBoxListener
+                  public ComboBox::Listener
 {
 public:
     //==============================================================================

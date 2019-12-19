@@ -2,35 +2,32 @@
   ==============================================================================
 
    This file is part of the JUCE library.
-   Copyright (c) 2013 - Raw Material Software Ltd.
+   Copyright (c) 2017 - ROLI Ltd.
 
-   Permission is granted to use this software under the terms of either:
-   a) the GPL v2 (or any later version)
-   b) the Affero GPL v3
+   JUCE is an open source library subject to commercial or open-source
+   licensing.
 
-   Details of these licenses can be found at: www.gnu.org/licenses
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   JUCE is distributed in the hope that it will be useful, but WITHOUT ANY
-   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-   A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-   ------------------------------------------------------------------------------
-
-   To release a closed-source product which uses JUCE, commercial licenses are
-   available: visit www.juce.com for more information.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
 
-#ifndef JUCE_MIDIBUFFER_H_INCLUDED
-#define JUCE_MIDIBUFFER_H_INCLUDED
-
+namespace juce
+{
 
 //==============================================================================
 /**
     Holds a sequence of time-stamped midi events.
 
-    Analogous to the AudioSampleBuffer, this holds a set of midi events with
+    Analogous to the AudioBuffer, this holds a set of midi events with
     integer time-stamps. The buffer is kept sorted in order of the time-stamps.
 
     If you're working with a sequence of midi events that may need to be manipulated
@@ -39,6 +36,8 @@
     midi data.
 
     @see MidiMessage
+
+    @tags{Audio}
 */
 class JUCE_API  MidiBuffer
 {
@@ -71,7 +70,6 @@ public:
     void clear (int start, int numSamples);
 
     /** Returns true if the buffer is empty.
-
         To actually retrieve the events, use a MidiBuffer::Iterator object
     */
     bool isEmpty() const noexcept;
@@ -137,13 +135,11 @@ public:
                     int sampleDeltaToAdd);
 
     /** Returns the sample number of the first event in the buffer.
-
         If the buffer's empty, this will just return 0.
     */
     int getFirstEventTime() const noexcept;
 
     /** Returns the sample number of the last event in the buffer.
-
         If the buffer's empty, this will just return 0.
     */
     int getLastEventTime() const noexcept;
@@ -154,7 +150,7 @@ public:
         This is a quick operation, because no memory allocating or copying is done, it
         just swaps the internal state of the two buffers.
     */
-    void swapWith (MidiBuffer& other) noexcept;
+    void swapWith (MidiBuffer&) noexcept;
 
     /** Preallocates some memory for the buffer to use.
         This helps to avoid needing to reallocate space when the buffer has messages
@@ -166,8 +162,8 @@ public:
     /**
         Used to iterate through the events in a MidiBuffer.
 
-        Note that altering the buffer while an iterator is using it isn't a
-        safe operation.
+        Note that altering the buffer while an iterator is using it will produce
+        undefined behaviour.
 
         @see MidiBuffer
     */
@@ -177,6 +173,9 @@ public:
         //==============================================================================
         /** Creates an Iterator for this MidiBuffer. */
         Iterator (const MidiBuffer&) noexcept;
+
+        /** Creates a copy of an iterator. */
+        Iterator (const Iterator&) = default;
 
         /** Destructor. */
         ~Iterator() noexcept;
@@ -189,9 +188,10 @@ public:
 
         /** Retrieves a copy of the next event from the buffer.
 
-            @param result   on return, this will be the message (the MidiMessage's timestamp
-                            is not set)
-            @param samplePosition   on return, this will be the position of the event
+            @param result   on return, this will be the message. The MidiMessage's timestamp
+                            is set to the same value as samplePosition.
+            @param samplePosition   on return, this will be the position of the event, as a
+                            sample index in the buffer
             @returns        true if an event was found, or false if the iterator has reached
                             the end of the buffer
         */
@@ -206,7 +206,8 @@ public:
                                 temporarily until the MidiBuffer is altered.
             @param numBytesOfMidiData   on return, this is the number of bytes of data used by the
                                         midi message
-            @param samplePosition   on return, this will be the position of the event
+            @param samplePosition   on return, this will be the position of the event, as a
+                                    sample index in the buffer
             @returns        true if an event was found, or false if the iterator has reached
                             the end of the buffer
         */
@@ -218,21 +219,16 @@ public:
         //==============================================================================
         const MidiBuffer& buffer;
         const uint8* data;
-
-        JUCE_DECLARE_NON_COPYABLE (Iterator)
     };
 
+    /** The raw data holding this buffer.
+        Obviously access to this data is provided at your own risk. Its internal format could
+        change in future, so don't write code that relies on it!
+    */
+    Array<uint8> data;
+
 private:
-    //==============================================================================
-    friend class MidiBuffer::Iterator;
-    MemoryBlock data;
-    int bytesUsed;
-
-    uint8* getData() const noexcept;
-    uint8* findEventAfter (uint8*, int samplePosition) const noexcept;
-
     JUCE_LEAK_DETECTOR (MidiBuffer)
 };
 
-
-#endif   // JUCE_MIDIBUFFER_H_INCLUDED
+} // namespace juce

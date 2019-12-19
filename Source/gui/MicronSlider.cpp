@@ -12,9 +12,9 @@
 #include "MicronSlider.h"
 
 class MicronSlider::Pimpl   : public AsyncUpdater,
-                        public ButtonListener,  // (can't use Button::Listener due to idiotic VC2005 bug)
-                        public LabelListener,
-                        public ValueListener
+                              public Button::Listener,  // (can't use Button::Listener due to idiotic VC2005 bug)
+                              public Label::Listener,
+                              public Value::Listener
 {
 public:
     Pimpl (MicronSlider& s, Slider::SliderStyle sliderStyle, Slider::TextEntryBoxPosition textBoxPosition)
@@ -594,10 +594,10 @@ owner.addAndMakeVisible (textBox = new Label());
 
         if (style == Slider::IncDecButtons)
         {
-            owner.addAndMakeVisible (incButton = lf.createSliderButton (true));
+            owner.addAndMakeVisible (incButton = lf.createSliderButton (owner, true));
             incButton->addListener (this);
 
-            owner.addAndMakeVisible (decButton = lf.createSliderButton (false));
+            owner.addAndMakeVisible (decButton = lf.createSliderButton (owner, false));
             decButton->addListener (this);
 
             if (incDecButtonMode != Slider::incDecButtonsNotDraggable)
@@ -624,7 +624,7 @@ owner.addAndMakeVisible (textBox = new Label());
             decButton = nullptr;
         }
 
-        owner.setComponentEffect (lf.getSliderEffect());
+        owner.setComponentEffect (lf.getSliderEffect(owner));
 
         owner.resized();
         owner.repaint();
@@ -1075,7 +1075,7 @@ owner.addAndMakeVisible (textBox = new Label());
 
             const Array<MouseInputSource>& mouseSources = Desktop::getInstance().getMouseSources();
 
-            for (MouseInputSource* mi = mouseSources.begin(), * const e = mouseSources.end(); mi != e; ++mi)
+            for (const MouseInputSource* mi = mouseSources.begin(), * const e = mouseSources.end(); mi != e; ++mi)
                 mi->enableUnboundedMouseMovement (false);
 
             const double pos = sliderBeingDragged == 2 ? getMaxValue()
@@ -1312,10 +1312,10 @@ owner.addAndMakeVisible (textBox = new Label());
     public:
         PopupDisplayComponent (MicronSlider& s)
             : owner (s),
-              font (s.getLookAndFeel().getSliderPopupFont())
+              font (s.getLookAndFeel().getSliderPopupFont(owner))
         {
             setAlwaysOnTop (true);
-            setAllowedPlacement (owner.getLookAndFeel().getSliderPopupPlacement());
+            setAllowedPlacement (owner.getLookAndFeel().getSliderPopupPlacement(owner));
         }
 
         void paintContent (Graphics& g, int w, int h)

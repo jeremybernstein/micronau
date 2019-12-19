@@ -21,7 +21,7 @@
 class StdComboBox    : public ComboBox
 {
 public:
-    explicit StdComboBox(const String& componentName = String::empty);
+    explicit StdComboBox(const String& componentName = String());
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StdComboBox)

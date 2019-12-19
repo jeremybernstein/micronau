@@ -124,13 +124,12 @@ public:
 
 //==============================================================================
 class MicronauAudioProcessorEditor  : public AudioProcessorEditor,
-										public AudioProcessorListener,
-                                        public SliderListener,
-                                        public ButtonListener,
-                                        public ComboBoxListener,
-                                        public TextEditorListener,
-                                        public MouseListener,
-                                        public Timer
+                                      public AudioProcessorListener,
+                                      public Slider::Listener,
+                                      public Button::Listener,
+                                      public ComboBox::Listener,
+                                      public TextEditor::Listener,
+                                      public Timer
 {
 public:
     MicronauAudioProcessorEditor (MicronauAudioProcessor* ownerFilter);
@@ -299,7 +298,7 @@ private:
 	Image buttonHoverImg;
 	Image buttonOnImg;
 
-    ScopedPointer<Drawable> logo;
+    std::unique_ptr<Drawable> logo;
     ScopedPointer<LookAndFeel> inverted_button_lf;
     OwnedArray<GroupComponent> group_boxes;
 

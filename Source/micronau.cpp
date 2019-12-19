@@ -62,12 +62,12 @@ MicronauAudioProcessor::~MicronauAudioProcessor()
 {
     if (midi_in != NULL) {
         midi_in->stop();
-		delete midi_in;
+		midi_in = NULL;
     }
 	
 	if (midi_out != NULL) {
 		midi_out->stopBackgroundThread();
-		delete midi_out;
+		midi_out = NULL;
 	}
 }
 
@@ -254,7 +254,7 @@ void MicronauAudioProcessor::setCurrentProgram (int index)
 
 const String MicronauAudioProcessor::getProgramName (int index)
 {
-    return String::empty;
+    return String();
 }
 
 void MicronauAudioProcessor::changeProgramName (int index, const String& newName)
@@ -509,7 +509,7 @@ void MicronauAudioProcessor::init_from_sysex(unsigned char *sysex)
     
 void MicronauAudioProcessor::handleIncomingMidiMessage (MidiInput* source, const MidiMessage& message)
 {
-    if (source != midi_in) {
+    if (source != midi_in.get()) {
         return;
     }
     if (message.isSysEx()) {
@@ -552,9 +552,8 @@ void MicronauAudioProcessor::set_midi_port(int in_out, String p)
         case MIDI_OUT_IDX:
             if (p != midi_out_port) {
                 if (midi_out != NULL) {
-					midi_out->stopBackgroundThread();
-                    delete midi_out;
-					midi_out = NULL; // NOTE: must set the pointer to null due to a race-condition when setting output port to None. ProcessBlock() may attempt to use dangling midi_out pointer.
+                    midi_out->stopBackgroundThread();
+                    midi_out = NULL; // NOTE: must set the pointer to null due to a race-condition when setting output port to None. ProcessBlock() may attempt to use dangling midi_out pointer.
                 }
                 midi_out_port = p;
                 idx = midi_find_port_by_name(in_out, midi_out_port);
@@ -562,7 +561,7 @@ void MicronauAudioProcessor::set_midi_port(int in_out, String p)
                     midi_out = NULL;
                 } else {
                     midi_out = MidiOutput::openDevice(idx);
-					midi_out->startBackgroundThread();
+                    midi_out->startBackgroundThread();
                 }
             }
             break;
@@ -570,8 +569,7 @@ void MicronauAudioProcessor::set_midi_port(int in_out, String p)
             if (p != midi_in_port) {
                 if (midi_in != NULL) {
                     midi_in->stop();
-                    delete midi_in;
-					midi_in = NULL;
+                    midi_in = NULL;
                 }
                 midi_in_port = p;
                 idx = midi_find_port_by_name(in_out, midi_in_port);

@@ -10,7 +10,7 @@
 
 #include "MicronSlider.h"
 #include "SliderBank.h"
-#include "micronauEditor.h"
+#include "../micronauEditor.h"
 
 //==============================================================================
 SliderBank::SliderBank (MicronauAudioProcessor *owner, MicronauAudioProcessorEditor *parent)

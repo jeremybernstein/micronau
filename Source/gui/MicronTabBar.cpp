@@ -167,7 +167,7 @@ Button* MicronTabBar::createButtonForTab()
 
 Label* MicronTabBar::createLabelForTab(const String& text)
 {
-	Label* label = new Label(String::empty, text);
+	Label* label = new Label(String(), text);
     label->setFont (Font (13.00f, Font::bold));
     label->setEditable (false, false, false);
     label->setColour (TextEditor::textColourId, Colours::black);

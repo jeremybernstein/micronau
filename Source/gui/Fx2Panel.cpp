@@ -33,7 +33,7 @@ Fx2Panel::Fx2Panel ()
     addAndMakeVisible (comboBox = new LcdComboBox ("new combo box"));
     comboBox->setEditableText (false);
     comboBox->setJustificationType (Justification::centred);
-    comboBox->setTextWhenNothingSelected (String::empty);
+    comboBox->setTextWhenNothingSelected (String());
     comboBox->setTextWhenNoChoicesAvailable ("(no choices)");
     comboBox->addItem ("bypass", 1);
     comboBox->addItem ("mono delay", 2);

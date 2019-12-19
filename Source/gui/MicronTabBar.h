@@ -18,7 +18,7 @@
 	MicronTabBar:
 		Custom component which partially supports TabbedComponent interface.
 */
-class MicronTabBar    : public Component, public ButtonListener
+class MicronTabBar    : public Component, public Button::Listener
 {
 public:
 	// NOTE: tabs are always on the left: we're using the orientation to position the labels the next to the buttons.

@@ -15,7 +15,7 @@
 LcdTextEditor::LcdTextEditor(const String& componentName, juce_wchar passwordCharacter) : TextEditor(componentName, passwordCharacter)
 {
 	// TODO: find out the full charset allowed in micron program names.
-	const String& allowedCharacters = String::empty;
+	const String& allowedCharacters = String();
     setInputRestrictions(14, allowedCharacters);
     setOpaque (false);
 	addListener(this);

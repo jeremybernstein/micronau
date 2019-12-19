@@ -19,10 +19,10 @@
 		Like a TextEditor except with customized appearance and 
 		behavior for the micronAU plugin.
 */
-class LcdTextEditor    : public TextEditor, public TextEditorListener
+class LcdTextEditor    : public TextEditor, public TextEditor::Listener
 {
 public:
-    explicit LcdTextEditor(const String& componentName = String::empty,
+    explicit LcdTextEditor(const String& componentName = String(),
                          juce_wchar passwordCharacter = 0);
 
 	// we will listen to ourself so that we can lose focus on return or escape.

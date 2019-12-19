@@ -1,34 +1,27 @@
 /*
   ==============================================================================
 
-   This file is part of the juce_core module of the JUCE library.
-   Copyright (c) 2013 - Raw Material Software Ltd.
+   This file is part of the JUCE library.
+   Copyright (c) 2017 - ROLI Ltd.
 
-   Permission to use, copy, modify, and/or distribute this software for any purpose with
-   or without fee is hereby granted, provided that the above copyright notice and this
-   permission notice appear in all copies.
+   JUCE is an open source library subject to commercial or open-source
+   licensing.
 
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD
-   TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN
-   NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
-   DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-   IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-   CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   ------------------------------------------------------------------------------
-
-   NOTE! This permissive ISC license applies ONLY to files within the juce_core module!
-   All other JUCE modules are covered by a dual GPL/commercial license, so if you are
-   using any other modules, be sure to check that you also comply with their license.
-
-   For more details, visit www.juce.com
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
 
-#ifndef JUCE_PROPERTYSET_H_INCLUDED
-#define JUCE_PROPERTYSET_H_INCLUDED
-
+namespace juce
+{
 
 //==============================================================================
 /**
@@ -39,6 +32,8 @@
 
     See the PropertiesFile class for a subclass of this, which automatically broadcasts change
     messages and saves/loads the list from a file.
+
+    @tags{Core}
 */
 class JUCE_API  PropertySet
 {
@@ -69,7 +64,7 @@ public:
         @param keyName              the name of the property to retrieve
         @param defaultReturnValue   a value to return if the named property doesn't actually exist
     */
-    String getValue (StringRef keyName, const String& defaultReturnValue = String::empty) const noexcept;
+    String getValue (StringRef keyName, const String& defaultReturnValue = String()) const noexcept;
 
     /** Returns one of the properties as an integer.
 
@@ -109,8 +104,8 @@ public:
 
     /** Returns one of the properties as an XML element.
 
-        The result will a new XMLElement object that the caller must delete. If may return 0 if the
-        key isn't found, or if the entry contains an string that isn't valid XML.
+        The result will a new XMLElement object that the caller must delete. If may return nullptr
+        if the key isn't found, or if the entry contains an string that isn't valid XML.
 
         If the value isn't found in this set, then this will look for it in a fallback
         property set (if you've specified one with the setFallbackPropertySet() method),
@@ -118,7 +113,7 @@ public:
 
         @param keyName              the name of the property to retrieve
     */
-    XmlElement* getXmlValue (StringRef keyName) const;
+    std::unique_ptr<XmlElement> getXmlValue (StringRef keyName) const;
 
     //==============================================================================
     /** Sets a named property.
@@ -131,8 +126,8 @@ public:
     /** Sets a named property to an XML element.
 
         @param keyName      the name of the property to set. (This mustn't be an empty string)
-        @param xml          the new element to set it to. If this is zero, the value will be set to
-                            an empty string
+        @param xml          the new element to set it to. If this is a nullptr, the value will
+                            be set to an empty string
         @see getXmlValue
     */
     void setValue (const String& keyName, const XmlElement* xml);
@@ -166,7 +161,7 @@ public:
         The string parameter is the tag name that should be used for the node.
         @see restoreFromXml
     */
-    XmlElement* createXml (const String& nodeName) const;
+    std::unique_ptr<XmlElement> createXml (const String& nodeName) const;
 
     /** Reloads a set of properties that were previously stored as XML.
         The node passed in must have been created by the createXml() method.
@@ -207,5 +202,4 @@ private:
     JUCE_LEAK_DETECTOR (PropertySet)
 };
 
-
-#endif   // JUCE_PROPERTYSET_H_INCLUDED
+} // namespace juce

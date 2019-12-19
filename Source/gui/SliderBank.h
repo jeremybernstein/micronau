@@ -12,7 +12,7 @@
 #define __JUCE_HEADER_4F1A0AB4C98078C6__
 
 #include "JuceHeader.h"
-#include "micronauEditor.h"
+#include "../micronauEditor.h"
 class MicronSlider;
 class MicronauAudioProcessorEditor;
 class ext_slider;
@@ -26,7 +26,7 @@ class ext_slider;
 
 */
 
-class SliderBank  : public Component, public SliderListener
+class SliderBank  : public Component, public Slider::Listener
 {
 public:
     //==============================================================================

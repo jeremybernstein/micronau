@@ -283,7 +283,7 @@ void PluginLookAndFeel::drawToggleButton (Graphics& g,
 
     g.drawFittedText (button.getButtonText(),
                       textX, 0,
-                      button.getWidth() - textX - 2, button.getHeight(),
+                      button.getWidth()/* - textX - 2*/, button.getHeight(),
                       Justification::centredLeft, 10);
 }
 
@@ -464,11 +464,13 @@ void PluginLookAndFeel::drawLabel (Graphics& g, Label& label)
 
         g.setColour (label.findColour (Label::textColourId).withMultipliedAlpha (alpha));
         g.setFont (font);
-        g.drawFittedText (label.getText(),
-                          label.getHorizontalBorderSize(),
-                          label.getVerticalBorderSize(),
-                          label.getWidth() - 2 * label.getHorizontalBorderSize(),
-                          label.getHeight() - 2 * label.getVerticalBorderSize(),
+		BorderSize<int> borderSize = label.getBorderSize();
+
+		g.drawFittedText (label.getText(),
+                          borderSize.getLeftAndRight(),
+                          borderSize.getTopAndBottom(),
+                          label.getWidth() - 2 * borderSize.getLeftAndRight(),
+                          label.getHeight() - 2 * borderSize.getTopAndBottom(),
                           label.getJustificationType(),
                           jmax (1, (int) (label.getHeight() / font.getHeight())),
                           label.getMinimumHorizontalScale());

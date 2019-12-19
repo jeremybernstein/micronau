@@ -2,29 +2,30 @@
   ==============================================================================
 
    This file is part of the JUCE library.
-   Copyright (c) 2013 - Raw Material Software Ltd.
+   Copyright (c) 2017 - ROLI Ltd.
 
-   Permission is granted to use this software under the terms of either:
-   a) the GPL v2 (or any later version)
-   b) the Affero GPL v3
+   JUCE is an open source library subject to commercial or open-source
+   licensing.
 
-   Details of these licenses can be found at: www.gnu.org/licenses
+   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
+   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
+   27th April 2017).
 
-   JUCE is distributed in the hope that it will be useful, but WITHOUT ANY
-   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-   A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+   End User License Agreement: www.juce.com/juce-5-licence
+   Privacy Policy: www.juce.com/juce-5-privacy-policy
 
-   ------------------------------------------------------------------------------
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   To release a closed-source product which uses JUCE, commercial licenses are
-   available: visit www.juce.com for more information.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
 
-#ifndef JUCE_PROGRESSBAR_H_INCLUDED
-#define JUCE_PROGRESSBAR_H_INCLUDED
-
+namespace juce
+{
 
 //==============================================================================
 /**
@@ -34,10 +35,16 @@
     to keep an eye on a variable that you give it, and will automatically
     redraw itself when the variable changes.
 
+    If using LookAndFeel_V4 a circular spinning progress bar will be drawn if
+    the width and height of the ProgressBar are equal, otherwise the standard,
+    linear ProgressBar will be drawn.
+
     For an easy way of running a background task with a dialog box showing its
     progress, see the ThreadWithProgressWindow class.
 
     @see ThreadWithProgressWindow
+
+    @tags{GUI}
 */
 class JUCE_API  ProgressBar  : public Component,
                                public SettableTooltipClient,
@@ -50,14 +57,15 @@ public:
         @param progress     pass in a reference to a double that you're going to
                             update with your task's progress. The ProgressBar will
                             monitor the value of this variable and will redraw itself
-                            when the value changes. The range is from 0 to 1.0. Obviously
-                            you'd better be careful not to delete this variable while the
-                            ProgressBar still exists!
+                            when the value changes. The range is from 0 to 1.0 and JUCE
+                            LookAndFeel classes will draw a spinning animation for values
+                            outside this range. Obviously you'd better be careful not to
+                            delete this variable while the ProgressBar still exists!
     */
     explicit ProgressBar (double& progress);
 
     /** Destructor. */
-    ~ProgressBar();
+    ~ProgressBar() override;
 
     //==============================================================================
     /** Turns the percentage display on or off.
@@ -90,6 +98,26 @@ public:
                                                              classes will probably use variations on this colour. */
     };
 
+    //==============================================================================
+    /** This abstract base class is implemented by LookAndFeel classes. */
+    struct JUCE_API  LookAndFeelMethods
+    {
+        virtual ~LookAndFeelMethods() = default;
+
+        /** Draws a progress bar.
+
+            If the progress value is less than 0 or greater than 1.0, this should draw a spinning
+            bar that fills the whole space (i.e. to say that the app is still busy but the progress
+            isn't known). It can use the current time as a basis for playing an animation.
+
+            (Used by progress bars in AlertWindow).
+        */
+        virtual void drawProgressBar (Graphics&, ProgressBar&, int width, int height,
+                                      double progress, const String& textToShow) = 0;
+
+        virtual bool isProgressBarOpaque (ProgressBar&) = 0;
+    };
+
 protected:
     //==============================================================================
     /** @internal */
@@ -113,5 +141,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProgressBar)
 };
 
-
-#endif   // JUCE_PROGRESSBAR_H_INCLUDED
+} // namespace juce
