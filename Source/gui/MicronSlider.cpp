@@ -1081,7 +1081,7 @@ owner.addAndMakeVisible (textBox = new Label());
             const double pos = sliderBeingDragged == 2 ? getMaxValue()
                                                        : (sliderBeingDragged == 1 ? getMinValue()
                                                                                   : (double) currentValue.getValue());
-            Point<int> mousePos;
+            juce::Point<int> mousePos;
 
             if (isRotary())
             {
@@ -1090,15 +1090,15 @@ owner.addAndMakeVisible (textBox = new Label());
                 const int delta = roundToInt (pixelsForFullDragExtent * (owner.valueToProportionOfLength (valueOnMouseDown)
                                                                            - owner.valueToProportionOfLength (pos)));
 
-                if (style == Slider::RotaryHorizontalDrag)      mousePos += Point<int> (-delta, 0);
-                else if (style == Slider::RotaryVerticalDrag)   mousePos += Point<int> (0, delta);
-                else                                    mousePos += Point<int> (delta / -2, delta / 2);
+                if (style == Slider::RotaryHorizontalDrag)      mousePos += juce::Point<int> (-delta, 0);
+                else if (style == Slider::RotaryVerticalDrag)   mousePos += juce::Point<int> (0, delta);
+                else                                    mousePos += juce::Point<int> (delta / -2, delta / 2);
             }
             else
             {
                 const int pixelPos = (int) getLinearSliderPos (pos);
 
-                mousePos = owner.localPointToGlobal (Point<int> (isHorizontal() ? pixelPos : (owner.getWidth() / 2),
+                mousePos = owner.localPointToGlobal (juce::Point<int> (isHorizontal() ? pixelPos : (owner.getWidth() / 2),
                                                                  isVertical()   ? pixelPos : (owner.getHeight() / 2)));
             }
 
@@ -1271,7 +1271,7 @@ owner.addAndMakeVisible (textBox = new Label());
     double velocityModeSensitivity, velocityModeOffset, minMaxDiff;
     int velocityModeThreshold;
     float rotaryStart, rotaryEnd;
-    Point<int> mouseDragStartPos, mousePosWhenLastDragged;
+    juce::Point<int> mouseDragStartPos, mousePosWhenLastDragged;
 	bool mouseFineAdjust;
 	Time prevMouseDownTime; // for double-click detection
     int sliderRegionStart, sliderRegionSize;

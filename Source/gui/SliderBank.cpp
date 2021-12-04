@@ -92,7 +92,7 @@ void SliderBank::setBroadStrokesMode(bool enableBroadStrokes)
 	broadStrokesEnabled = enableBroadStrokes;
 }
 
-MicronSlider* SliderBank::findSliderAtPos(const Point<int>& pos)
+MicronSlider* SliderBank::findSliderAtPos(const juce::Point<int>& pos)
 {
 	MicronSlider* closestSlider = 0;
 	float closestDist = 1e6;

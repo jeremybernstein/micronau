@@ -51,7 +51,7 @@ private:
     void mouseDrag (const MouseEvent& event);
 
 	void updateBoundsX();
-	MicronSlider* findSliderAtPos(const Point<int>& pos);
+	MicronSlider* findSliderAtPos(const juce::Point<int>& pos);
 	void resetDoubleClickTimer();
 
 	bool broadStrokesEnabled; // mode for broad-stroke 'painting' of slider values
