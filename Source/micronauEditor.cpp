@@ -1347,13 +1347,13 @@ void ext_slider::mouseDoubleClick(const MouseEvent& event)
 }
 #endif
 
-KeyboardFocusTraverser* MicronauAudioProcessorEditor::createFocusTraverser()
+std::unique_ptr<ComponentTraverser> MicronauAudioProcessorEditor::createFocusTraverser()
 {	// user may have finished with something like a combo box, so make sure the next thing to focus on is nothing.
 
 	// NOTE: we also have to unfocus all components, otherwise text editors don't seem to let go of focus after something else is clicked.
 	Component::unfocusAllComponents();
 
-	return new NullKeyboardFocusTraverser;
+    return make_unique<NullKeyboardFocusTraverser>();
 }
 
 //

@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -37,7 +45,7 @@ FileBrowserComponent::FileBrowserComponent (int flags_,
      previewComp (previewComp_),
      currentPathBox ("path"),
      fileLabel ("f", TRANS ("file:")),
-     thread ("JUCE FileBrowser"),
+     thread (SystemStats::getJUCEVersion() + ": FileBrowser"),
      wasProcessActive (true)
 {
     // You need to specify one or other of the open/save flags..
@@ -63,6 +71,9 @@ FileBrowserComponent::FileBrowserComponent (int flags_,
         currentRoot = initialFileOrDirectory.getParentDirectory();
         filename = initialFileOrDirectory.getFileName();
     }
+
+    // The thread must be started before the DirectoryContentsList attempts to scan any file
+    thread.startThread (Thread::Priority::low);
 
     fileList.reset (new DirectoryContentsList (this, thread));
     fileList->setDirectory (currentRoot, true, true);
@@ -113,11 +124,6 @@ FileBrowserComponent::FileBrowserComponent (int flags_,
     addAndMakeVisible (fileLabel);
     fileLabel.attachToComponent (&filenameBox, true);
 
-    goUpButton.reset (getLookAndFeel().createFileBrowserGoUpButton());
-    addAndMakeVisible (goUpButton.get());
-    goUpButton->onClick = [this] { goUp(); };
-    goUpButton->setTooltip (TRANS ("Go up to parent directory"));
-
     if (previewComp != nullptr)
         addAndMakeVisible (previewComp);
 
@@ -127,8 +133,6 @@ FileBrowserComponent::FileBrowserComponent (int flags_,
 
     if (filename.isNotEmpty())
         setFileName (filename);
-
-    thread.startThread (4);
 
     startTimer (2000);
 }
@@ -328,9 +332,9 @@ void FileBrowserComponent::setFileFilter (const FileFilter* const newFileFilter)
 
 String FileBrowserComponent::getActionVerb() const
 {
-    return isSaveMode() ? ((flags & canSelectDirectories) != 0 ? TRANS("Choose")
-                                                               : TRANS("Save"))
-                        : TRANS("Open");
+    return isSaveMode() ? ((flags & canSelectDirectories) != 0 ? TRANS ("Choose")
+                                                               : TRANS ("Save"))
+                        : TRANS ("Open");
 }
 
 void FileBrowserComponent::setFilenameBoxLabel (const String& name)
@@ -359,12 +363,23 @@ void FileBrowserComponent::resized()
 //==============================================================================
 void FileBrowserComponent::lookAndFeelChanged()
 {
+    goUpButton.reset (getLookAndFeel().createFileBrowserGoUpButton());
+
+    if (auto* buttonPtr = goUpButton.get())
+    {
+        addAndMakeVisible (*buttonPtr);
+        buttonPtr->onClick = [this] { goUp(); };
+        buttonPtr->setTooltip (TRANS ("Go up to parent directory"));
+    }
+
     currentPathBox.setColour (ComboBox::backgroundColourId,    findColour (currentPathBoxBackgroundColourId));
     currentPathBox.setColour (ComboBox::textColourId,          findColour (currentPathBoxTextColourId));
     currentPathBox.setColour (ComboBox::arrowColourId,         findColour (currentPathBoxArrowColourId));
 
     filenameBox.setColour (TextEditor::backgroundColourId,     findColour (filenameBoxBackgroundColourId));
-    filenameBox.setColour (TextEditor::textColourId,           findColour (filenameBoxTextColourId));
+    filenameBox.applyColourToAllText (findColour (filenameBoxTextColourId));
+
+    resized();
 }
 
 //==============================================================================
@@ -433,9 +448,9 @@ void FileBrowserComponent::fileDoubleClicked (const File& f)
 
 void FileBrowserComponent::browserRootChanged (const File&) {}
 
-bool FileBrowserComponent::keyPressed (const KeyPress& key)
+bool FileBrowserComponent::keyPressed ([[maybe_unused]] const KeyPress& key)
 {
-   #if JUCE_LINUX || JUCE_WINDOWS
+   #if JUCE_LINUX || JUCE_BSD || JUCE_WINDOWS
     if (key.getModifiers().isCommandDown()
          && (key.getKeyCode() == 'H' || key.getKeyCode() == 'h'))
     {
@@ -445,7 +460,6 @@ bool FileBrowserComponent::keyPressed (const KeyPress& key)
     }
    #endif
 
-    ignoreUnused (key);
     return false;
 }
 
@@ -524,7 +538,7 @@ void FileBrowserComponent::getDefaultRoots (StringArray& rootNames, StringArray&
 
     for (int i = 0; i < roots.size(); ++i)
     {
-        const File& drive = roots.getReference(i);
+        const File& drive = roots.getReference (i);
 
         String name (drive.getFullPathName());
         rootPaths.add (name);
@@ -534,13 +548,13 @@ void FileBrowserComponent::getDefaultRoots (StringArray& rootNames, StringArray&
             String volume (drive.getVolumeLabel());
 
             if (volume.isEmpty())
-                volume = TRANS("Hard Drive");
+                volume = TRANS ("Hard Drive");
 
             name << " [" << volume << ']';
         }
         else if (drive.isOnCDRomDrive())
         {
-            name << " [" << TRANS("CD/DVD drive") << ']';
+            name << " [" << TRANS ("CD/DVD drive") << ']';
         }
 
         rootNames.add (name);
@@ -550,25 +564,25 @@ void FileBrowserComponent::getDefaultRoots (StringArray& rootNames, StringArray&
     rootNames.add ({});
 
     rootPaths.add (File::getSpecialLocation (File::userDocumentsDirectory).getFullPathName());
-    rootNames.add (TRANS("Documents"));
+    rootNames.add (TRANS ("Documents"));
     rootPaths.add (File::getSpecialLocation (File::userMusicDirectory).getFullPathName());
-    rootNames.add (TRANS("Music"));
+    rootNames.add (TRANS ("Music"));
     rootPaths.add (File::getSpecialLocation (File::userPicturesDirectory).getFullPathName());
-    rootNames.add (TRANS("Pictures"));
+    rootNames.add (TRANS ("Pictures"));
     rootPaths.add (File::getSpecialLocation (File::userDesktopDirectory).getFullPathName());
-    rootNames.add (TRANS("Desktop"));
+    rootNames.add (TRANS ("Desktop"));
 
    #elif JUCE_MAC
     rootPaths.add (File::getSpecialLocation (File::userHomeDirectory).getFullPathName());
-    rootNames.add (TRANS("Home folder"));
+    rootNames.add (TRANS ("Home folder"));
     rootPaths.add (File::getSpecialLocation (File::userDocumentsDirectory).getFullPathName());
-    rootNames.add (TRANS("Documents"));
+    rootNames.add (TRANS ("Documents"));
     rootPaths.add (File::getSpecialLocation (File::userMusicDirectory).getFullPathName());
-    rootNames.add (TRANS("Music"));
+    rootNames.add (TRANS ("Music"));
     rootPaths.add (File::getSpecialLocation (File::userPicturesDirectory).getFullPathName());
-    rootNames.add (TRANS("Pictures"));
+    rootNames.add (TRANS ("Pictures"));
     rootPaths.add (File::getSpecialLocation (File::userDesktopDirectory).getFullPathName());
-    rootNames.add (TRANS("Desktop"));
+    rootNames.add (TRANS ("Desktop"));
 
     rootPaths.add ({});
     rootNames.add ({});
@@ -586,9 +600,9 @@ void FileBrowserComponent::getDefaultRoots (StringArray& rootNames, StringArray&
     rootPaths.add ("/");
     rootNames.add ("/");
     rootPaths.add (File::getSpecialLocation (File::userHomeDirectory).getFullPathName());
-    rootNames.add (TRANS("Home folder"));
+    rootNames.add (TRANS ("Home folder"));
     rootPaths.add (File::getSpecialLocation (File::userDesktopDirectory).getFullPathName());
-    rootNames.add (TRANS("Desktop"));
+    rootNames.add (TRANS ("Desktop"));
    #endif
 }
 
@@ -599,7 +613,7 @@ void FileBrowserComponent::getRoots (StringArray& rootNames, StringArray& rootPa
 
 void FileBrowserComponent::timerCallback()
 {
-    const bool isProcessActive = Process::isForegroundProcess();
+    const auto isProcessActive = detail::WindowingHelpers::isForegroundOrEmbeddedProcess (this);
 
     if (wasProcessActive != isProcessActive)
     {
@@ -608,6 +622,12 @@ void FileBrowserComponent::timerCallback()
         if (isProcessActive && fileList != nullptr)
             refresh();
     }
+}
+
+//==============================================================================
+std::unique_ptr<AccessibilityHandler> FileBrowserComponent::createAccessibilityHandler()
+{
+    return std::make_unique<AccessibilityHandler> (*this, AccessibilityRole::group);
 }
 
 } // namespace juce

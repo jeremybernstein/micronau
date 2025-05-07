@@ -18,6 +18,7 @@
 
 #include "pluginterfaces/base/fstrdefs.h"
 #include "pluginterfaces/base/funknown.h"
+#include <cstdlib>
 
 //------------------------------------------------------------------------
 namespace Steinberg {
@@ -138,10 +139,10 @@ public:
 		return (type & kInteger) ? static_cast<double> (intValue) : (type & kFloat) ? floatValue :
 																					  0.;
 	}
-	inline const char8* getString8 () const { return (type & kString8) ? string8 : 0; }
-	inline const char16* getString16 () const { return (type & kString16) ? string16 : 0; }
+	inline const char8* getString8 () const { return (type & kString8) ? string8 : nullptr; }
+	inline const char16* getString16 () const { return (type & kString16) ? string16 : nullptr; }
 
-	inline FUnknown* getObject () const { return (type & kObject) ? object : 0; }
+	inline FUnknown* getObject () const { return (type & kObject) ? object : nullptr; }
 
 	inline uint16 getType () const { return static_cast<uint16> (type & ~(kOwner)); }
 	inline bool isEmpty () const { return getType () == kEmpty; }
@@ -249,9 +250,9 @@ inline void FVariant::empty ()
 	if (type & kOwner)
 	{
 		if ((type & kString8) && string8)
-			delete[] string8;
+			free (const_cast<char8*> (string8)); // should match DELETESTR8
 		else if ((type & kString16) && string16)
-			delete[] string16;
+			free (const_cast<char16*> (string16)); // should match DELETESTR16
 
 		else if ((type & kObject) && object)
 			object->release ();
@@ -268,14 +269,14 @@ inline FVariant& FVariant::operator= (const FVariant& variant)
 
 	if ((type & kString8) && variant.string8)
 	{
-		string8 = new char8[strlen (variant.string8) + 1];
+		string8 = static_cast<char8*> (malloc (strlen (variant.string8) + 1)); // should match NEWSTR8 
 		strcpy (const_cast<char8*> (string8), variant.string8);
 		type |= kOwner;
 	}
 	else if ((type & kString16) && variant.string16)
 	{
-		int32 len = strlen16 (variant.string16);
-		string16 = new char16[len + 1];
+		auto len = static_cast<size_t> (strlen16 (variant.string16));
+		string16 = static_cast<char16*> (malloc ((len + 1) * sizeof (char16))); // should match NEWSTR16
 		char16* tmp = const_cast<char16*> (string16);
 		memcpy (tmp, variant.string16, len * sizeof (char16));
 		tmp[len] = 0;

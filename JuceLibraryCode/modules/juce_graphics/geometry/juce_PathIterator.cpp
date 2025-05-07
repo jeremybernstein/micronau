@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -72,7 +80,7 @@ bool PathFlatteningIterator::next()
     {
         float type;
 
-        if (stackPos == stackBase)
+        if (stackPos == stackBase.get())
         {
             if (source == path.data.end())
                 return false;
@@ -137,11 +145,11 @@ bool PathFlatteningIterator::next()
         {
             ++subPathIndex;
 
-            closesSubPath = stackPos == stackBase
+            closesSubPath = stackPos == stackBase.get()
                              && source != path.data.end()
-                             && *source == Path::closeSubPathMarker
-                             && x2 == subPathCloseX
-                             && y2 == subPathCloseY;
+                             && isMarker (*source, Path::closeSubPathMarker)
+                             && approximatelyEqual (x2, subPathCloseX)
+                             && approximatelyEqual (y2, subPathCloseY);
 
             return true;
         }
@@ -167,7 +175,11 @@ bool PathFlatteningIterator::next()
             auto errorX = m3x - x2;
             auto errorY = m3y - y2;
 
-            if (errorX * errorX + errorY * errorY > toleranceSquared)
+            auto outsideTolerance = errorX * errorX + errorY * errorY > toleranceSquared;
+            auto canBeSubdivided = (! approximatelyEqual (m3x, m1x) && ! approximatelyEqual (m3x, m2x))
+                                || (! approximatelyEqual (m3y, m1y) && ! approximatelyEqual (m3y, m2y));
+
+            if (outsideTolerance && canBeSubdivided)
             {
                 *stackPos++ = y3;
                 *stackPos++ = x3;
@@ -221,8 +233,14 @@ bool PathFlatteningIterator::next()
             auto error2X = m5x - x3;
             auto error2Y = m5y - y3;
 
-            if (error1X * error1X + error1Y * error1Y > toleranceSquared
-                 || error2X * error2X + error2Y * error2Y > toleranceSquared)
+            auto outsideTolerance = error1X * error1X + error1Y * error1Y > toleranceSquared
+                                 || error2X * error2X + error2Y * error2Y > toleranceSquared;
+            auto canBeSubdivided = (! approximatelyEqual (m4x, m1x) && ! approximatelyEqual (m4x, m2x))
+                                || (! approximatelyEqual (m4y, m1y) && ! approximatelyEqual (m4y, m2y))
+                                || (! approximatelyEqual (m5x, m3x) && ! approximatelyEqual (m5x, m2x))
+                                || (! approximatelyEqual (m5y, m3y) && ! approximatelyEqual (m5y, m2y));
+
+            if (outsideTolerance && canBeSubdivided)
             {
                 *stackPos++ = y4;
                 *stackPos++ = x4;
@@ -257,7 +275,7 @@ bool PathFlatteningIterator::next()
         }
         else if (isMarker (type, Path::closeSubPathMarker))
         {
-            if (x2 != subPathCloseX || y2 != subPathCloseY)
+            if (! approximatelyEqual (x2, subPathCloseX) || ! approximatelyEqual (y2, subPathCloseY))
             {
                 x1 = x2;
                 y1 = y2;

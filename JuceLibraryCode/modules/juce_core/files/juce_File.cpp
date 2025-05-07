@@ -1,21 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   The code included in this file is provided under the terms of the ISC license
-   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
-   To use, copy, modify, and/or distribute this software for any purpose with or
-   without fee is hereby granted provided that the above copyright notice and
-   this permission notice appear in all copies.
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+
+   Or:
+
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -63,8 +75,6 @@ File& File::operator= (File&& other) noexcept
     return *this;
 }
 
-JUCE_DECLARE_DEPRECATED_STATIC (const File File::nonexistent{};)
-
 //==============================================================================
 static String removeEllipsis (const String& path)
 {
@@ -104,6 +114,26 @@ static String removeEllipsis (const String& path)
     return path;
 }
 
+static String normaliseSeparators (const String& path)
+{
+    auto normalisedPath = path;
+
+    String separator (File::getSeparatorString());
+    String doubleSeparator (separator + separator);
+
+    auto uncPath = normalisedPath.startsWith (doubleSeparator)
+                  && ! normalisedPath.fromFirstOccurrenceOf (doubleSeparator, false, false).startsWith (separator);
+
+    if (uncPath)
+        normalisedPath = normalisedPath.fromFirstOccurrenceOf (doubleSeparator, false, false);
+
+    while (normalisedPath.contains (doubleSeparator))
+         normalisedPath = normalisedPath.replace (doubleSeparator, separator);
+
+    return uncPath ? doubleSeparator + normalisedPath
+                   : normalisedPath;
+}
+
 bool File::isRoot() const
 {
     return fullPath.isNotEmpty() && *this == getParentDirectory();
@@ -114,9 +144,9 @@ String File::parseAbsolutePath (const String& p)
     if (p.isEmpty())
         return {};
 
-#if JUCE_WINDOWS
+   #if JUCE_WINDOWS
     // Windows..
-    auto path = removeEllipsis (p.replaceCharacter ('/', '\\'));
+    auto path = normaliseSeparators (removeEllipsis (p.replaceCharacter ('/', '\\')));
 
     if (path.startsWithChar (getSeparatorChar()))
     {
@@ -147,7 +177,7 @@ String File::parseAbsolutePath (const String& p)
 
         return File::getCurrentWorkingDirectory().getChildFile (path).getFullPathName();
     }
-#else
+   #else
     // Mac or Linux..
 
     // Yes, I know it's legal for a unix pathname to contain a backslash, but this assertion is here
@@ -155,7 +185,7 @@ String File::parseAbsolutePath (const String& p)
     // If that's why you've ended up here, use File::getChildFile() to build your paths instead.
     jassert ((! p.containsChar ('\\')) || (p.indexOfChar ('/') >= 0 && p.indexOfChar ('/') < p.indexOfChar ('\\')));
 
-    auto path = removeEllipsis (p);
+    auto path = normaliseSeparators (removeEllipsis (p));
 
     if (path.startsWithChar ('~'))
     {
@@ -196,7 +226,7 @@ String File::parseAbsolutePath (const String& p)
 
         return File::getCurrentWorkingDirectory().getChildFile (path).getFullPathName();
     }
-#endif
+   #endif
 
     while (path.endsWithChar (getSeparatorChar()) && path != getSeparatorString()) // careful not to turn a single "/" into an empty string.
         path = path.dropLastCharacters (1);
@@ -211,7 +241,7 @@ String File::addTrailingSeparator (const String& path)
 }
 
 //==============================================================================
-#if JUCE_LINUX
+#if JUCE_LINUX || JUCE_BSD
  #define NAMES_ARE_CASE_SENSITIVE 1
 #endif
 
@@ -342,6 +372,14 @@ File File::getParentDirectory() const
     return createFileWithoutCheckingPath (getPathUpToLastSlash());
 }
 
+bool File::isNonEmptyDirectory() const
+{
+    if (! isDirectory())
+        return false;
+
+    return RangedDirectoryIterator (*this, false, "*", findFilesAndDirectories) != RangedDirectoryIterator();
+}
+
 //==============================================================================
 String File::getFileName() const
 {
@@ -465,7 +503,7 @@ String File::descriptionOfSizeInBytes (const int64 bytes)
     else if (bytes < 1024 * 1024 * 1024)  { suffix = " MB"; divisor = 1024.0 * 1024.0; }
     else                                  { suffix = " GB"; divisor = 1024.0 * 1024.0 * 1024.0; }
 
-    return (divisor > 0 ? String (bytes / divisor, 1) : String (bytes)) + suffix;
+    return (divisor > 0 ? String ((double) bytes / divisor, 1) : String (bytes)) + suffix;
 }
 
 //==============================================================================
@@ -543,18 +581,18 @@ void File::readLines (StringArray& destLines) const
 }
 
 //==============================================================================
-Array<File> File::findChildFiles (int whatToLookFor, bool searchRecursively, const String& wildcard) const
+Array<File> File::findChildFiles (int whatToLookFor, bool searchRecursively, const String& wildcard, FollowSymlinks followSymlinks) const
 {
     Array<File> results;
-    findChildFiles (results, whatToLookFor, searchRecursively, wildcard);
+    findChildFiles (results, whatToLookFor, searchRecursively, wildcard, followSymlinks);
     return results;
 }
 
-int File::findChildFiles (Array<File>& results, int whatToLookFor, bool searchRecursively, const String& wildcard) const
+int File::findChildFiles (Array<File>& results, int whatToLookFor, bool searchRecursively, const String& wildcard, FollowSymlinks followSymlinks) const
 {
     int total = 0;
 
-    for (DirectoryIterator di (*this, searchRecursively, wildcard, whatToLookFor); di.next();)
+    for (const auto& di : RangedDirectoryIterator (*this, searchRecursively, wildcard, whatToLookFor, followSymlinks))
     {
         results.add (di.getFile());
         ++total;
@@ -565,12 +603,10 @@ int File::findChildFiles (Array<File>& results, int whatToLookFor, bool searchRe
 
 int File::getNumberOfChildFiles (const int whatToLookFor, const String& wildCardPattern) const
 {
-    int total = 0;
-
-    for (DirectoryIterator di (*this, false, wildCardPattern, whatToLookFor); di.next();)
-        ++total;
-
-    return total;
+    return std::accumulate (RangedDirectoryIterator (*this, false, wildCardPattern, whatToLookFor),
+                            RangedDirectoryIterator(),
+                            0,
+                            [] (int acc, const DirectoryEntry&) { return acc + 1; });
 }
 
 bool File::containsSubDirectories() const
@@ -578,8 +614,7 @@ bool File::containsSubDirectories() const
     if (! isDirectory())
         return false;
 
-    DirectoryIterator di (*this, false, "*", findDirectories);
-    return di.next();
+    return RangedDirectoryIterator (*this, false, "*", findDirectories) != RangedDirectoryIterator();
 }
 
 //==============================================================================
@@ -706,22 +741,24 @@ bool File::startAsProcess (const String& parameters) const
 }
 
 //==============================================================================
-FileInputStream* File::createInputStream() const
+std::unique_ptr<FileInputStream> File::createInputStream() const
 {
-    std::unique_ptr<FileInputStream> fin (new FileInputStream (*this));
+    auto fin = std::make_unique<FileInputStream> (*this);
 
     if (fin->openedOk())
-        return fin.release();
+        return fin;
 
     return nullptr;
 }
 
-FileOutputStream* File::createOutputStream (size_t bufferSize) const
+std::unique_ptr<FileOutputStream> File::createOutputStream (size_t bufferSize) const
 {
-    std::unique_ptr<FileOutputStream> out (new FileOutputStream (*this, bufferSize));
+    auto fout = std::make_unique<FileOutputStream> (*this, bufferSize);
 
-    return out->failedToOpen() ? nullptr
-                               : out.release();
+    if (fout->openedOk())
+        return fout;
+
+    return nullptr;
 }
 
 //==============================================================================
@@ -733,8 +770,8 @@ bool File::appendData (const void* const dataToAppend,
     if (numberOfBytes == 0)
         return true;
 
-    FileOutputStream out (*this, 8192);
-    return out.openedOk() && out.write (dataToAppend, numberOfBytes);
+    FileOutputStream fout (*this, 8192);
+    return fout.openedOk() && fout.write (dataToAppend, numberOfBytes);
 }
 
 bool File::replaceWithData (const void* const dataToWrite,
@@ -750,12 +787,12 @@ bool File::replaceWithData (const void* const dataToWrite,
 
 bool File::appendText (const String& text, bool asUnicode, bool writeHeaderBytes, const char* lineFeed) const
 {
-    FileOutputStream out (*this);
+    FileOutputStream fout (*this);
 
-    if (out.failedToOpen())
+    if (fout.failedToOpen())
         return false;
 
-    return out.writeText (text, asUnicode, writeHeaderBytes, lineFeed);
+    return fout.writeText (text, asUnicode, writeHeaderBytes, lineFeed);
 }
 
 bool File::replaceWithText (const String& textToWrite, bool asUnicode, bool writeHeaderBytes, const char* lineFeed) const
@@ -936,7 +973,7 @@ File File::createTempFile (StringRef fileNameEnding)
 }
 
 bool File::createSymbolicLink (const File& linkFileToCreate,
-                               const String& nativePathOfTarget,
+                               [[maybe_unused]] const String& nativePathOfTarget,
                                bool overwriteExisting)
 {
     if (linkFileToCreate.exists())
@@ -953,7 +990,7 @@ bool File::createSymbolicLink (const File& linkFileToCreate,
             linkFileToCreate.deleteFile();
     }
 
-   #if JUCE_MAC || JUCE_LINUX
+   #if JUCE_MAC || JUCE_LINUX || JUCE_BSD
     // one common reason for getting an error here is that the file already exists
     if (symlink (nativePathOfTarget.toRawUTF8(), linkFileToCreate.getFullPathName().toRawUTF8()) == -1)
     {
@@ -969,7 +1006,6 @@ bool File::createSymbolicLink (const File& linkFileToCreate,
                                nativePathOfTarget.toWideCharPointer(),
                                targetFile.isDirectory() ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0) != FALSE;
    #else
-    ignoreUnused (nativePathOfTarget);
     jassertfalse; // symbolic links not supported on this platform!
     return false;
    #endif
@@ -991,6 +1027,17 @@ File File::getLinkedTarget() const
 #endif
 
 //==============================================================================
+#if JUCE_ALLOW_STATIC_NULL_VARIABLES
+
+JUCE_BEGIN_IGNORE_DEPRECATION_WARNINGS
+
+const File File::nonexistent{};
+
+JUCE_END_IGNORE_DEPRECATION_WARNINGS
+
+#endif
+
+//==============================================================================
 MemoryMappedFile::MemoryMappedFile (const File& file, MemoryMappedFile::AccessMode mode, bool exclusive)
     : range (0, file.getSize())
 {
@@ -1008,7 +1055,7 @@ MemoryMappedFile::MemoryMappedFile (const File& file, const Range<int64>& fileRa
 //==============================================================================
 #if JUCE_UNIT_TESTS
 
-class FileTests  : public UnitTest
+class FileTests final : public UnitTest
 {
 public:
     FileTests()
@@ -1026,12 +1073,11 @@ public:
         expect (! File().existsAsFile());
         expect (! File().isDirectory());
        #if ! JUCE_WINDOWS
-        expect (File("/").isDirectory());
+        expect (File ("/").isDirectory());
        #endif
         expect (home.isDirectory());
         expect (home.exists());
         expect (! home.existsAsFile());
-        expect (File::getSpecialLocation (File::userApplicationDataDirectory).isDirectory());
         expect (File::getSpecialLocation (File::currentExecutableFile).exists());
         expect (File::getSpecialLocation (File::currentApplicationFile).exists());
         expect (File::getSpecialLocation (File::invokedExecutableFile).exists());
@@ -1042,7 +1088,25 @@ public:
         expect (! home.isOnCDRomDrive());
         expect (File::getCurrentWorkingDirectory().exists());
         expect (home.setAsCurrentWorkingDirectory());
-        expect (File::getCurrentWorkingDirectory() == home);
+
+        {
+            auto homeParent = home;
+            bool noSymlinks = true;
+
+            while (! homeParent.isRoot())
+            {
+                if (homeParent.isSymbolicLink())
+                {
+                    noSymlinks = false;
+                    break;
+                }
+
+                homeParent = homeParent.getParentDirectory();
+            }
+
+            if (noSymlinks)
+                expect (File::getCurrentWorkingDirectory() == home);
+        }
 
         {
             Array<File> roots;
@@ -1060,7 +1124,11 @@ public:
 
         beginTest ("Writing");
 
-        File demoFolder (temp.getChildFile ("JUCE UnitTests Temp Folder.folder"));
+        auto random = getRandom();
+        const auto tempFolderName = "JUCE UnitTests Temp Folder "
+                                  + String::toHexString (random.nextInt())
+                                  + ".folder";
+        File demoFolder (temp.getChildFile (tempFolderName));
         expect (demoFolder.deleteRecursively());
         expect (demoFolder.createDirectory());
         expect (demoFolder.isDirectory());
@@ -1088,16 +1156,23 @@ public:
         expect (home.getChildFile ("...xyz").getFileName() == "...xyz");
         expect (home.getChildFile ("./xyz") == home.getChildFile ("xyz"));
         expect (home.getChildFile ("././xyz") == home.getChildFile ("xyz"));
-        expect (home.getChildFile ("../xyz") == home.getParentDirectory().getChildFile ("xyz"));
-        expect (home.getChildFile (".././xyz") == home.getParentDirectory().getChildFile ("xyz"));
-        expect (home.getChildFile (".././xyz/./abc") == home.getParentDirectory().getChildFile ("xyz/abc"));
-        expect (home.getChildFile ("./../xyz") == home.getParentDirectory().getChildFile ("xyz"));
+        expect (home.getChildFile ("../xyz") == home.getSiblingFile ("xyz"));
+        expect (home.getChildFile (".././xyz") == home.getSiblingFile ("xyz"));
+        expect (home.getChildFile (".././xyz/./abc") == home.getSiblingFile ("xyz/abc"));
+        expect (home.getChildFile ("./../xyz") == home.getSiblingFile ("xyz"));
         expect (home.getChildFile ("a1/a2/a3/./../../a4") == home.getChildFile ("a1/a4"));
+
+        expect (! File().hasReadAccess());
+        expect (! File().hasWriteAccess());
+
+        expect (! tempFile.hasReadAccess());
 
         {
             FileOutputStream fo (tempFile);
             fo.write ("0123456789", 10);
         }
+
+        expect (tempFile.hasReadAccess());
 
         expect (tempFile.exists());
         expect (tempFile.getSize() == 10);

@@ -10,6 +10,8 @@
 #ifndef __PLUGINPROCESSOR_H_CCAD67E2__
 #define __PLUGINPROCESSOR_H_CCAD67E2__
 
+#include <MacTypes.h>
+
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "IonSysex.h"
 

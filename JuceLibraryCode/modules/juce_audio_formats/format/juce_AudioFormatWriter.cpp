@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -36,7 +44,7 @@ AudioFormatWriter::AudioFormatWriter (OutputStream* const out,
     numChannels (numChannels_),
     bitsPerSample (bitsPerSample_),
     usesFloatingPointData (false),
-    channelLayout (AudioChannelSet::canonicalChannelSet(static_cast<int> (numChannels_))),
+    channelLayout (AudioChannelSet::canonicalChannelSet (static_cast<int> (numChannels_))),
     output (out),
     formatName (formatName_)
 {
@@ -109,8 +117,10 @@ bool AudioFormatWriter::writeFromAudioReader (AudioFormatReader& reader,
             {
                 void* const b = *bufferChan++;
 
+                constexpr auto scaleFactor = 1.0f / static_cast<float> (0x7fffffff);
+
                 if (isFloatingPoint())
-                    FloatVectorOperations::convertFixedToFloat ((float*) b, (int*) b, 1.0f / 0x7fffffff, numToDo);
+                    FloatVectorOperations::convertFixedToFloat ((float*) b, (int*) b, scaleFactor, numToDo);
                 else
                     convertFloatsToInts ((int*) b, (float*) b, numToDo);
             }
@@ -156,16 +166,16 @@ bool AudioFormatWriter::writeFromFloatArrays (const float* const* channels, int 
     if (isFloatingPoint())
         return write ((const int**) channels, numSamples);
 
-    int* chans[256];
-    int scratch[4096];
+    std::vector<int*> chans (256);
+    std::vector<int> scratch (4096);
 
-    jassert (numSourceChannels < numElementsInArray (chans));
-    const int maxSamples = (int) (numElementsInArray (scratch) / numSourceChannels);
+    jassert (numSourceChannels < (int) chans.size());
+    const int maxSamples = (int) scratch.size() / numSourceChannels;
 
     for (int i = 0; i < numSourceChannels; ++i)
-        chans[i] = scratch + (i * maxSamples);
+        chans[(size_t) i] = scratch.data() + (i * maxSamples);
 
-    chans[numSourceChannels] = nullptr;
+    chans[(size_t) numSourceChannels] = nullptr;
     int startSample = 0;
 
     while (numSamples > 0)
@@ -173,9 +183,9 @@ bool AudioFormatWriter::writeFromFloatArrays (const float* const* channels, int 
         auto numToDo = jmin (numSamples, maxSamples);
 
         for (int i = 0; i < numSourceChannels; ++i)
-            convertFloatsToInts (chans[i], channels[i] + startSample, numToDo);
+            convertFloatsToInts (chans[(size_t) i], channels[(size_t) i] + startSample, numToDo);
 
-        if (! write ((const int**) chans, numToDo))
+        if (! write ((const int**) chans.data(), numToDo))
             return false;
 
         startSample += numToDo;
@@ -210,7 +220,7 @@ bool AudioFormatWriter::flush()
 }
 
 //==============================================================================
-class AudioFormatWriter::ThreadedWriter::Buffer   : private TimeSliceClient
+class AudioFormatWriter::ThreadedWriter::Buffer final : private TimeSliceClient
 {
 public:
     Buffer (TimeSliceThread& tst, AudioFormatWriter* w, int channels, int numSamples)

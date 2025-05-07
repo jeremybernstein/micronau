@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -31,7 +39,7 @@ namespace RelativeRectangleHelpers
 {
     inline void skipComma (String::CharPointerType& s)
     {
-        s = s.findEndOfWhitespace();
+        s.incrementToEndOfWhitespace();
 
         if (*s == ',')
             ++s;
@@ -52,6 +60,11 @@ namespace RelativeRectangleHelpers
                 case RelativeCoordinate::StandardStrings::right:
                 case RelativeCoordinate::StandardStrings::top:
                 case RelativeCoordinate::StandardStrings::bottom:   return false;
+                case RelativeCoordinate::StandardStrings::width:
+                case RelativeCoordinate::StandardStrings::height:
+                case RelativeCoordinate::StandardStrings::parent:
+                case RelativeCoordinate::StandardStrings::unknown:
+
                 default: break;
             }
 
@@ -60,7 +73,7 @@ namespace RelativeRectangleHelpers
         else
         {
             for (int i = e.getNumInputs(); --i >= 0;)
-                if (dependsOnSymbolsOtherThanThis (e.getInput(i)))
+                if (dependsOnSymbolsOtherThanThis (e.getInput (i)))
                     return true;
         }
 
@@ -112,12 +125,12 @@ bool RelativeRectangle::operator!= (const RelativeRectangle& other) const noexce
 
 //==============================================================================
 // An expression context that can evaluate expressions using "this"
-class RelativeRectangleLocalScope  : public Expression::Scope
+class RelativeRectangleLocalScope final : public Expression::Scope
 {
 public:
     RelativeRectangleLocalScope (const RelativeRectangle& rect_)  : rect (rect_) {}
 
-    Expression getSymbolValue (const String& symbol) const
+    Expression getSymbolValue (const String& symbol) const override
     {
         switch (RelativeCoordinate::StandardStrings::getTypeOf (symbol))
         {
@@ -127,6 +140,10 @@ public:
             case RelativeCoordinate::StandardStrings::top:      return rect.top.getExpression();
             case RelativeCoordinate::StandardStrings::right:    return rect.right.getExpression();
             case RelativeCoordinate::StandardStrings::bottom:   return rect.bottom.getExpression();
+            case RelativeCoordinate::StandardStrings::width:
+            case RelativeCoordinate::StandardStrings::height:
+            case RelativeCoordinate::StandardStrings::parent:
+            case RelativeCoordinate::StandardStrings::unknown:
             default: break;
         }
 
@@ -189,7 +206,7 @@ void RelativeRectangle::renameSymbol (const Expression::Symbol& oldSymbol, const
 }
 
 //==============================================================================
-class RelativeRectangleComponentPositioner  : public RelativeCoordinatePositionerBase
+class RelativeRectangleComponentPositioner final : public RelativeCoordinatePositionerBase
 {
 public:
     RelativeRectangleComponentPositioner (Component& comp, const RelativeRectangle& r)

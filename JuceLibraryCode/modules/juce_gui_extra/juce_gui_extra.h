@@ -1,48 +1,61 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
+
 
 /*******************************************************************************
  The block below describes the properties of this module, and is read by
  the Projucer to automatically generate project code that uses it.
  For details about the syntax and how to create or use a module, see the
- JUCE Module Format.txt file.
+ JUCE Module Format.md file.
 
 
  BEGIN_JUCE_MODULE_DECLARATION
 
-  ID:               juce_gui_extra
-  vendor:           juce
-  version:          5.4.5
-  name:             JUCE extended GUI classes
-  description:      Miscellaneous GUI classes for specialised tasks.
-  website:          http://www.juce.com/juce
-  license:          GPL/Commercial
+  ID:                     juce_gui_extra
+  vendor:                 juce
+  version:                8.0.7
+  name:                   JUCE extended GUI classes
+  description:            Miscellaneous GUI classes for specialised tasks.
+  website:                http://www.juce.com/juce
+  license:                AGPLv3/Commercial
+  minimumCppStandard:     17
 
-  dependencies:     juce_gui_basics
-  OSXFrameworks:    WebKit
+  dependencies:           juce_gui_basics
+  OSXFrameworks:          WebKit
+  iOSFrameworks:          WebKit
+  WeakiOSFrameworks:      UserNotifications
+  WeakMacOSFrameworks:    UserNotifications
 
  END_JUCE_MODULE_DECLARATION
 
@@ -56,11 +69,53 @@
 
 //==============================================================================
 /** Config: JUCE_WEB_BROWSER
-    This lets you disable the WebBrowserComponent class (Mac and Windows).
+    This lets you disable the WebBrowserComponent class.
     If you're not using any embedded web-pages, turning this off may reduce your code size.
 */
 #ifndef JUCE_WEB_BROWSER
  #define JUCE_WEB_BROWSER 1
+#endif
+
+/** Config: JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING
+    Enables the use of the Microsoft Edge (Chromium) WebView2 browser on Windows.
+
+    If using the Projucer, the Microsoft.Web.WebView2 package will be added to the
+    project solution if this flag is enabled. If you are building using CMake you
+    will need to manually add the package via the NuGet package manager.
+
+    Using this flag requires statically linking against WebView2LoaderStatic.lib,
+    which at this time is only available through the NuGet package, but is missing
+    in VCPKG.
+
+    In addition to enabling this macro, you will need to use the
+    WebBrowserComponent::Options::Backend::webview2 option when instantiating the
+    WebBrowserComponent.
+*/
+#ifndef JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING
+ #define JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING 0
+#else
+ #define JUCE_USE_WIN_WEBVIEW2 1
+#endif
+
+/** Config: JUCE_USE_WIN_WEBVIEW2
+    Enables the use of the Microsoft Edge (Chromium) WebView2 browser on Windows.
+
+    If using the Projucer, the Microsoft.Web.WebView2 package will be added to the
+    project solution if this flag is enabled. If you are building using CMake you
+    will need to manually add the package via the Visual Studio package manager.
+
+    If the WITH_STATIC_LINKING variant of this flag is also set, you must statically
+    link against WebView2LoaderStatic.lib, otherwise dynamic loading will be used.
+
+    See more about dynamic linking in the documentation of
+    WebBrowserComponent::Options::WinWebView2::withDLLLocation().
+
+    In addition to enabling this macro, you will need to use the
+    WebBrowserComponent::Options::Backend::webview2 option when instantiating the
+    WebBrowserComponent.
+*/
+#ifndef JUCE_USE_WIN_WEBVIEW2
+ #define JUCE_USE_WIN_WEBVIEW2 0
 #endif
 
 /** Config: JUCE_ENABLE_LIVE_CONSTANT_EDITOR
@@ -88,7 +143,7 @@
 #include "embedding/juce_NSViewComponent.h"
 #include "embedding/juce_UIViewComponent.h"
 #include "embedding/juce_XEmbedComponent.h"
-#include "embedding/juce_ScopedDPIAwarenessDisabler.h"
+#include "embedding/juce_HWNDComponent.h"
 #include "misc/juce_AppleRemote.h"
 #include "misc/juce_BubbleMessageComponent.h"
 #include "misc/juce_ColourSelector.h"
@@ -101,3 +156,6 @@
 #include "misc/juce_WebBrowserComponent.h"
 #include "misc/juce_LiveConstantEditor.h"
 #include "misc/juce_AnimatedAppComponent.h"
+#include "detail/juce_WebControlRelayEvents.h"
+#include "misc/juce_WebControlRelays.h"
+#include "misc/juce_WebControlParameterIndexReceiver.h"

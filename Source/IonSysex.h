@@ -22,12 +22,13 @@
 #ifndef _IONSYSEX_H_
 #define _IONSYSEX_H_
 
+#include <MacTypes.h>
+
 #include <stdio.h>
 #include <string>
 #include <vector>
 #include <map>
 #include <iostream>
-#include <MacTypes.h>
 #include "../JuceLibraryCode/JuceHeader.h"
 
 #define FX1_SELECTOR 800

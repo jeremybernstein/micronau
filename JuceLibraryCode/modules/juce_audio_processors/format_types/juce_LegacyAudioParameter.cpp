@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -27,18 +35,9 @@
 namespace juce
 {
 
-#if JUCE_GCC
- #pragma GCC diagnostic push
- #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#elif JUCE_CLANG
- #pragma clang diagnostic push
- #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif JUCE_MSVC
- #pragma warning (push, 0)
- #pragma warning (disable: 4996)
-#endif
+JUCE_BEGIN_IGNORE_DEPRECATION_WARNINGS
 
-class LegacyAudioParameter :   public AudioProcessorParameter
+class LegacyAudioParameter final : public HostedAudioProcessorParameter
 {
 public:
     LegacyAudioParameter (AudioProcessor& audioProcessorToUse, int audioParameterIndex)
@@ -63,7 +62,7 @@ public:
     bool isMetaParameter() const override              { return processor->isMetaParameter (parameterIndex); }
     Category getCategory() const override              { return processor->getParameterCategory (parameterIndex); }
     String getCurrentValueAsText() const override      { return processor->getParameterText (parameterIndex); }
-    String getParamID() const                          { return processor->getParameterID (parameterIndex); }
+    String getParameterID() const override             { return processor->getParameterID (parameterIndex); }
 
     //==============================================================================
     float getValueForText (const String&) const override
@@ -107,19 +106,21 @@ public:
         return -1;
     }
 
-    static String getParamID (AudioProcessorParameter* param, bool forceLegacyParamIDs) noexcept
+    static String getParamID (const AudioProcessorParameter* param, bool forceLegacyParamIDs) noexcept
     {
-        if (auto* legacy = dynamic_cast<LegacyAudioParameter*> (param))
-        {
-            return forceLegacyParamIDs ? String (legacy->parameterIndex) : legacy->getParamID();
-        }
-        else if (auto* paramWithID = dynamic_cast<AudioProcessorParameterWithID*> (param))
+        if (auto* legacy = dynamic_cast<const LegacyAudioParameter*> (param))
+            return forceLegacyParamIDs ? String (legacy->parameterIndex) : legacy->getParameterID();
+
+        if (auto* paramWithID = dynamic_cast<const HostedAudioProcessorParameter*> (param))
         {
             if (! forceLegacyParamIDs)
-                return paramWithID->paramID;
+                return paramWithID->getParameterID();
         }
 
-        return String (param->getParameterIndex());
+        if (param != nullptr)
+            return String (param->getParameterIndex());
+
+        return {};
     }
 };
 
@@ -127,6 +128,13 @@ public:
 class LegacyAudioParametersWrapper
 {
 public:
+    LegacyAudioParametersWrapper() = default;
+
+    LegacyAudioParametersWrapper (AudioProcessor& audioProcessor, bool forceLegacyParamIDs)
+    {
+        update (audioProcessor, forceLegacyParamIDs);
+    }
+
     void update (AudioProcessor& audioProcessor, bool forceLegacyParamIDs)
     {
         clear();
@@ -138,15 +146,28 @@ public:
 
         for (int i = 0; i < numParameters; ++i)
         {
-            AudioProcessorParameter* param = usingManagedParameters ? audioProcessor.getParameters()[i]
-                                                                    : (legacy.add (new LegacyAudioParameter (audioProcessor, i)));
+            auto* param = [&]() -> AudioProcessorParameter*
+            {
+                if (usingManagedParameters)
+                    return audioProcessor.getParameters()[i];
+
+                auto newParam = std::make_unique<LegacyAudioParameter> (audioProcessor, i);
+                auto* result = newParam.get();
+                ownedGroup.addChild (std::move (newParam));
+
+                return result;
+            }();
+
             params.add (param);
         }
+
+        processorGroup = usingManagedParameters ? &audioProcessor.getParameterTree()
+                                                : nullptr;
     }
 
     void clear()
     {
-        legacy.clear();
+        ownedGroup = AudioProcessorParameterGroup();
         params.clear();
     }
 
@@ -166,22 +187,37 @@ public:
         return String (idx);
     }
 
+    const AudioProcessorParameterGroup& getGroup() const
+    {
+        return processorGroup != nullptr ? *processorGroup
+                                         : ownedGroup;
+    }
+
+    void addNonOwning (AudioProcessorParameter* param)
+    {
+        params.add (param);
+    }
+
+    size_t size() const noexcept { return (size_t) params.size(); }
+
     bool isUsingManagedParameters() const noexcept    { return usingManagedParameters; }
     int getNumParameters() const noexcept             { return params.size(); }
 
-    Array<AudioProcessorParameter*> params;
+    AudioProcessorParameter* const* begin() const { return params.begin(); }
+    AudioProcessorParameter* const* end()   const { return params.end(); }
+
+    bool contains (AudioProcessorParameter* param) const
+    {
+        return params.contains (param);
+    }
 
 private:
-    OwnedArray<LegacyAudioParameter> legacy;
+    const AudioProcessorParameterGroup* processorGroup = nullptr;
+    AudioProcessorParameterGroup ownedGroup;
+    Array<AudioProcessorParameter*> params;
     bool legacyParamIDs = false, usingManagedParameters = false;
 };
 
-#if JUCE_GCC
- #pragma GCC diagnostic pop
-#elif JUCE_CLANG
- #pragma clang diagnostic pop
-#elif JUCE_MSVC
- #pragma warning (pop)
-#endif
+JUCE_END_IGNORE_DEPRECATION_WARNINGS
 
 } // namespace juce

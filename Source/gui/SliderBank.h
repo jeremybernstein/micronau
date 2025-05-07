@@ -11,8 +11,8 @@
 #ifndef __JUCE_HEADER_4F1A0AB4C98078C6__
 #define __JUCE_HEADER_4F1A0AB4C98078C6__
 
-#include "JuceHeader.h"
 #include "../micronauEditor.h"
+#include "JuceHeader.h"
 class MicronSlider;
 class MicronauAudioProcessorEditor;
 class ext_slider;

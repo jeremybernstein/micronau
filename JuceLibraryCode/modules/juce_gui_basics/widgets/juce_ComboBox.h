@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -240,8 +248,8 @@ public:
 
         The text passed-in will be set as the current text regardless of whether
         it is one of the items in the list. If the current text isn't one of the
-        items, then getSelectedId() will return 0, otherwise it wil return
-        the approriate ID.
+        items, then getSelectedId() will return 0, otherwise it will return
+        the appropriate ID.
 
         @param newText          the text to select
         @param notification     determines the type of change notification that will
@@ -273,7 +281,10 @@ public:
     /** Returns the PopupMenu object associated with the ComboBox.
         Can be useful for adding sub-menus to the ComboBox standard PopupMenu
     */
-    PopupMenu* getRootMenu() { return &currentMenu; }
+    PopupMenu* getRootMenu() noexcept { return &currentMenu; }
+
+    /** Returns the PopupMenu object associated with the ComboBox. */
+    const PopupMenu* getRootMenu() const noexcept { return &currentMenu; }
 
     //==============================================================================
     /**
@@ -417,12 +428,17 @@ public:
     void valueChanged (Value&) override;
     /** @internal */
     void parentHierarchyChanged() override;
+    /** @internal */
+    std::unique_ptr<AccessibilityHandler> createAccessibilityHandler() override;
 
+    //==============================================================================
+   #ifndef DOXYGEN
     // These methods' bool parameters have changed: see their new method signatures.
-    JUCE_DEPRECATED (void clear (bool));
-    JUCE_DEPRECATED (void setSelectedId (int, bool));
-    JUCE_DEPRECATED (void setSelectedItemIndex (int, bool));
-    JUCE_DEPRECATED (void setText (const String&, bool));
+    [[deprecated]] void clear (bool);
+    [[deprecated]] void setSelectedId (int, bool);
+    [[deprecated]] void setSelectedItemIndex (int, bool);
+    [[deprecated]] void setText (const String&, bool);
+   #endif
 
 private:
     //==============================================================================

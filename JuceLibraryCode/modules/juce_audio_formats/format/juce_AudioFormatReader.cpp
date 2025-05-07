@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -39,9 +47,11 @@ AudioFormatReader::~AudioFormatReader()
 
 static void convertFixedToFloat (int* const* channels, int numChannels, int numSamples)
 {
+    constexpr auto scaleFactor = 1.0f / static_cast<float> (0x7fffffff);
+
     for (int i = 0; i < numChannels; ++i)
         if (auto d = channels[i])
-            FloatVectorOperations::convertFixedToFloat (reinterpret_cast<float*> (d), d, 1.0f / 0x7fffffff, numSamples);
+            FloatVectorOperations::convertFixedToFloat (reinterpret_cast<float*> (d), d, scaleFactor, numSamples);
 }
 
 bool AudioFormatReader::read (float* const* destChannels, int numDestChannels,
@@ -85,7 +95,7 @@ bool AudioFormatReader::read (int* const* destChannels,
     if (numSamplesToRead <= 0)
         return true;
 
-    if (! readSamples (const_cast<int**> (destChannels),
+    if (! readSamples (destChannels,
                        jmin ((int) numChannels, numDestChannels), startOffsetInDestBuffer,
                        startSampleInSource, numSamplesToRead))
         return false;
@@ -121,7 +131,7 @@ bool AudioFormatReader::read (int* const* destChannels,
     return true;
 }
 
-static void readChannels (AudioFormatReader& reader, int** chans, AudioBuffer<float>* buffer,
+static bool readChannels (AudioFormatReader& reader, int** chans, AudioBuffer<float>* buffer,
                           int startSample, int numSamples, int64 readerStartSample, int numTargetChannels,
                           bool convertToFloat)
 {
@@ -129,13 +139,16 @@ static void readChannels (AudioFormatReader& reader, int** chans, AudioBuffer<fl
         chans[j] = reinterpret_cast<int*> (buffer->getWritePointer (j, startSample));
 
     chans[numTargetChannels] = nullptr;
-    reader.read (chans, numTargetChannels, readerStartSample, numSamples, true);
+
+    const bool success = reader.read (chans, numTargetChannels, readerStartSample, numSamples, true);
 
     if (convertToFloat)
         convertFixedToFloat (chans, numTargetChannels, numSamples);
+
+    return success;
 }
 
-void AudioFormatReader::read (AudioBuffer<float>* buffer,
+bool AudioFormatReader::read (AudioBuffer<float>* buffer,
                               int startSample,
                               int numSamples,
                               int64 readerStartSample,
@@ -145,54 +158,61 @@ void AudioFormatReader::read (AudioBuffer<float>* buffer,
     jassert (buffer != nullptr);
     jassert (startSample >= 0 && startSample + numSamples <= buffer->getNumSamples());
 
-    if (numSamples > 0)
+    if (numSamples <= 0)
+        return true;
+
+    auto numTargetChannels = buffer->getNumChannels();
+
+    if (numTargetChannels <= 2)
     {
-        auto numTargetChannels = buffer->getNumChannels();
+        int* dests[2] = { reinterpret_cast<int*> (buffer->getWritePointer (0, startSample)),
+                          reinterpret_cast<int*> (numTargetChannels > 1 ? buffer->getWritePointer (1, startSample) : nullptr) };
+        int* chans[3] = {};
 
-        if (numTargetChannels <= 2)
+        if (useReaderLeftChan == useReaderRightChan)
         {
-            int* dests[2] = { reinterpret_cast<int*> (buffer->getWritePointer (0, startSample)),
-                              reinterpret_cast<int*> (numTargetChannels > 1 ? buffer->getWritePointer (1, startSample) : nullptr) };
-            int* chans[3] = {};
+            chans[0] = dests[0];
 
-            if (useReaderLeftChan == useReaderRightChan)
-            {
-                chans[0] = dests[0];
-
-                if (numChannels > 1)
-                    chans[1] = dests[1];
-            }
-            else if (useReaderLeftChan || (numChannels == 1))
-            {
-                chans[0] = dests[0];
-            }
-            else if (useReaderRightChan)
-            {
-                chans[1] = dests[0];
-            }
-
-            read (chans, 2, readerStartSample, numSamples, true);
-
-            // if the target's stereo and the source is mono, dupe the first channel..
-            if (numTargetChannels > 1 && (chans[0] == nullptr || chans[1] == nullptr))
-                memcpy (dests[1], dests[0], (size_t) numSamples * sizeof (float));
-
-            if (! usesFloatingPointData)
-                convertFixedToFloat (dests, 2, numSamples);
+            if (numChannels > 1)
+                chans[1] = dests[1];
         }
-        else if (numTargetChannels <= 64)
+        else if (useReaderLeftChan || (numChannels == 1))
         {
-            int* chans[65];
-            readChannels (*this, chans, buffer, startSample, numSamples,
-                          readerStartSample, numTargetChannels, ! usesFloatingPointData);
+            chans[0] = dests[0];
         }
-        else
+        else if (useReaderRightChan)
         {
-            HeapBlock<int*> chans (numTargetChannels + 1);
-            readChannels (*this, chans, buffer, startSample, numSamples,
-                          readerStartSample, numTargetChannels, ! usesFloatingPointData);
+            chans[1] = dests[0];
         }
+
+        if (! read (chans, 2, readerStartSample, numSamples, true))
+            return false;
+
+        // if the target's stereo and the source is mono, dupe the first channel..
+        if (numTargetChannels > 1
+            && (chans[0] == nullptr || chans[1] == nullptr)
+            && (dests[0] != nullptr && dests[1] != nullptr))
+        {
+            memcpy (dests[1], dests[0], (size_t) numSamples * sizeof (float));
+        }
+
+        if (! usesFloatingPointData)
+            convertFixedToFloat (dests, 2, numSamples);
+
+        return true;
     }
+
+    if (numTargetChannels <= 64)
+    {
+        int* chans[65];
+        return readChannels (*this, chans, buffer, startSample, numSamples,
+                             readerStartSample, numTargetChannels, ! usesFloatingPointData);
+    }
+
+    HeapBlock<int*> chans (numTargetChannels + 1);
+
+    return readChannels (*this, chans, buffer, startSample, numSamples,
+                         readerStartSample, numTargetChannels, ! usesFloatingPointData);
 }
 
 void AudioFormatReader::readMaxLevels (int64 startSampleInFile, int64 numSamples,
@@ -234,8 +254,8 @@ void AudioFormatReader::readMaxLevels (int64 startSampleInFile, int64 numSamples
             {
                 auto intRange = Range<int>::findMinAndMax (intBuffer[i], numToDo);
 
-                r = Range<float> (intRange.getStart() / (float) std::numeric_limits<int>::max(),
-                                  intRange.getEnd()   / (float) std::numeric_limits<int>::max());
+                r = Range<float> ((float) intRange.getStart() / (float) std::numeric_limits<int>::max(),
+                                  (float) intRange.getEnd()   / (float) std::numeric_limits<int>::max());
             }
 
             results[i] = isFirstBlock ? r : results[i].getUnionWith (r);
@@ -279,11 +299,12 @@ int64 AudioFormatReader::searchForLevel (int64 startSample,
         return -1;
 
     const int bufferSize = 4096;
-    HeapBlock<int> tempSpace (bufferSize * 2 + 64);
+    const size_t channels = numChannels;
+    HeapBlock<int> tempSpace (bufferSize * channels + 64);
+    std::vector<int*> channelPointers (channels);
 
-    int* tempBuffer[3] = { tempSpace.get(),
-                           tempSpace.get() + bufferSize,
-                           nullptr };
+    for (auto [index, ptr] : enumerate (channelPointers, size_t{}))
+        ptr = tempSpace + (bufferSize * index);
 
     int consecutive = 0;
     int64 firstMatchPos = -1;
@@ -306,7 +327,7 @@ int64 AudioFormatReader::searchForLevel (int64 startSample,
         if (bufferStart >= lengthInSamples)
             break;
 
-        read (tempBuffer, 2, bufferStart, numThisTime, false);
+        read (channelPointers.data(), (int) channels, bufferStart, numThisTime, false);
         auto num = numThisTime;
 
         while (--num >= 0)
@@ -314,43 +335,25 @@ int64 AudioFormatReader::searchForLevel (int64 startSample,
             if (numSamplesToSearch < 0)
                 --startSample;
 
-            bool matches = false;
             auto index = (int) (startSample - bufferStart);
 
-            if (usesFloatingPointData)
+            const auto matches = std::invoke ([&]
             {
-                const float sample1 = std::abs (((float*) tempBuffer[0]) [index]);
-
-                if (sample1 >= magnitudeRangeMinimum
-                     && sample1 <= magnitudeRangeMaximum)
+                if (usesFloatingPointData)
                 {
-                    matches = true;
+                    return std::any_of (channelPointers.begin(), channelPointers.end(), [&] (const auto& ptr)
+                    {
+                        const float sample = std::abs (((float*) ptr) [index]);
+                        return magnitudeRangeMinimum <= sample && sample <= magnitudeRangeMaximum;
+                    });
                 }
-                else if (numChannels > 1)
-                {
-                    const float sample2 = std::abs (((float*) tempBuffer[1]) [index]);
 
-                    matches = (sample2 >= magnitudeRangeMinimum
-                                 && sample2 <= magnitudeRangeMaximum);
-                }
-            }
-            else
-            {
-                const int sample1 = std::abs (tempBuffer[0] [index]);
-
-                if (sample1 >= intMagnitudeRangeMinimum
-                     && sample1 <= intMagnitudeRangeMaximum)
+                return std::any_of (channelPointers.begin(), channelPointers.end(), [&] (const auto& ptr)
                 {
-                    matches = true;
-                }
-                else if (numChannels > 1)
-                {
-                    const int sample2 = std::abs (tempBuffer[1][index]);
-
-                    matches = (sample2 >= intMagnitudeRangeMinimum
-                                 && sample2 <= intMagnitudeRangeMaximum);
-                }
-            }
+                    const int sample = std::abs (ptr[index]);
+                    return intMagnitudeRangeMinimum <= sample && sample <= intMagnitudeRangeMaximum;
+                });
+            });
 
             if (matches)
             {

@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -39,7 +47,7 @@ namespace juce
 
     @tags{Audio}
 */
-class AudioProcessorParameterGroup
+class JUCE_API AudioProcessorParameterGroup
 {
 public:
     //==============================================================================
@@ -143,9 +151,17 @@ public:
         addChild (std::forward<Args> (remainingChildren)...);
     }
 
+    /** Once a group has been added to an AudioProcessor don't try to mutate it by
+        moving or swapping it - this will crash most hosts.
+    */
     AudioProcessorParameterGroup (AudioProcessorParameterGroup&&);
+
+    /** Once a group has been added to an AudioProcessor don't try to mutate it by
+        moving or swapping it - this will crash most hosts.
+    */
     AudioProcessorParameterGroup& operator= (AudioProcessorParameterGroup&&);
 
+    /** Destructor. */
     ~AudioProcessorParameterGroup();
 
     //==============================================================================
@@ -158,8 +174,15 @@ public:
     /** Returns the group's separator string. */
     String getSeparator() const;
 
-    /** Returns the parent of the group, or nullptr if this is a top-levle group. */
+    /** Returns the parent of the group, or nullptr if this is a top-level group. */
     const AudioProcessorParameterGroup* getParent() const noexcept;
+
+    //==============================================================================
+    /** Changes the name of the group. If you do this after the group has been added
+        to an AudioProcessor, call updateHostDisplay() to inform the host of the
+        change. Not all hosts support dynamic group name changes.
+    */
+    void setName (String newName);
 
     //==============================================================================
     const AudioProcessorParameterNode* const* begin() const noexcept;
@@ -186,7 +209,11 @@ public:
     Array<const AudioProcessorParameterGroup*> getGroupsForParameter (AudioProcessorParameter*) const;
 
     //==============================================================================
-    /** Adds a child to the group. */
+    /** Adds a child to the group.
+
+        Do not add children to a group which has itself already been added to the
+        AudioProcessor - the new elements will be ignored.
+    */
     template <typename ParameterOrGroup>
     void addChild (std::unique_ptr<ParameterOrGroup> child)
     {
@@ -196,7 +223,11 @@ public:
         append (std::move (child));
     }
 
-    /** Adds multiple parameters or sub-groups to this group. */
+    /** Adds multiple parameters or sub-groups to this group.
+
+        Do not add children to a group which has itself already been added to the
+        AudioProcessor - the new elements will be ignored.
+    */
     template <typename ParameterOrGroup, typename... Args>
     void addChild (std::unique_ptr<ParameterOrGroup> firstChild, Args&&... remainingChildren)
     {
@@ -205,9 +236,11 @@ public:
     }
 
    #ifndef DOXYGEN
-    // This class now has a move operator, so if you're try to move them around, you should
-    // use that, or if you really need to swap two groups, just call std::swap
-    JUCE_DEPRECATED_WITH_BODY (void swapWith (AudioProcessorParameterGroup& other), { std::swap (*this, other); })
+    [[deprecated ("This class now has a move operator, so if you're trying to move them around, you "
+                 "should use that, or if you really need to swap two groups, just call std::swap. "
+                 "However, remember that swapping a group that's already owned by an AudioProcessor "
+                 "will most likely crash the host, so don't do that.")]]
+    void swapWith (AudioProcessorParameterGroup& other)  { std::swap (*this, other); }
    #endif
 
 private:

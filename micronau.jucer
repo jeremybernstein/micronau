@@ -7,10 +7,10 @@
               pluginIsSynth="1" pluginWantsMidiIn="1" pluginProducesMidiOut="1"
               pluginSilenceInIsSilenceOut="1" pluginEditorRequiresKeys="0"
               pluginAUExportPrefix="micronAU" pluginRTASCategory="" aaxIdentifier="com.retroware.micronau"
-              pluginAAXCategory="2" jucerVersion="5.4.5" includeBinaryInAppConfig="1"
-              pluginFormats="buildAU,buildStandalone,buildVST,buildVST3" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn,pluginProducesMidiOut"
+              pluginAAXCategory="2" includeBinaryInAppConfig="1" pluginFormats="buildAU,buildStandalone,buildVST,buildVST3"
+              pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn,pluginProducesMidiOut"
               buildVST3="1" buildAUv3="0" buildRTAS="0" buildAAX="0" buildStandalone="1"
-              enableIAA="0">
+              enableIAA="0" jucerFormatVersion="1">
   <MAINGROUP id="Z7l85g" name="micronau">
     <GROUP id="{E6F88093-29FA-DE20-1C16-D06398D26127}" name="Resources">
       <FILE id="doMF9C" name="default.syx" compile="0" resource="1" file="Source/default.syx"/>
@@ -117,7 +117,7 @@
         <MODULEPATH id="juce_audio_formats" path="JuceLibraryCode/modules"/>
         <MODULEPATH id="juce_audio_devices" path="JuceLibraryCode/modules"/>
         <MODULEPATH id="juce_audio_basics" path="JuceLibraryCode/modules"/>
-        <MODULEPATH id="juce_audio_utils" path="../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="JuceLibraryCode/modules"/>
       </MODULEPATHS>
     </XCODE_MAC>
   </EXPORTFORMATS>

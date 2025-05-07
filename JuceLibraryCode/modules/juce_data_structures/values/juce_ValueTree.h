@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -62,7 +70,7 @@ namespace juce
     will correspond to the order in which the property was added, or that it will remain
     constant when other properties are added or removed.
 
-    Listeners can be added to a ValueTree to be told when properies change and when
+    Listeners can be added to a ValueTree to be told when properties change and when
     sub-trees are added or removed.
 
     @see var, XmlElement
@@ -71,6 +79,8 @@ namespace juce
 */
 class JUCE_API  ValueTree  final
 {
+    JUCE_PUBLIC_IN_DLL_BUILD (class SharedObject)
+
 public:
     //==============================================================================
     /** Creates an empty, invalid ValueTree.
@@ -414,7 +424,7 @@ public:
         using iterator_category  = std::forward_iterator_tag;
 
     private:
-        void* internal;
+        SharedObject** internal = nullptr;
     };
 
     /** Returns a start iterator for the children in this tree. */
@@ -427,7 +437,6 @@ public:
     /** Creates an XmlElement that holds a complete image of this tree and all its children.
         If this tree is invalid, this may return nullptr. Otherwise, the XML that is produced can
         be used to recreate a similar tree by calling ValueTree::fromXml().
-        The caller must delete the object that is returned.
         @see fromXml, toXmlString
     */
     std::unique_ptr<XmlElement> createXml() const;
@@ -608,14 +617,14 @@ public:
     */
     int getReferenceCount() const noexcept;
 
-    /* An invalid ValueTree that can be used if you need to return one as an error condition, etc.
-        @deprecated If you need an empty ValueTree object, just use ValueTree() or {}.
-    */
-    JUCE_DEPRECATED_STATIC (static const ValueTree invalid;)
+   #if JUCE_ALLOW_STATIC_NULL_VARIABLES && ! defined (DOXYGEN)
+    /* An invalid ValueTree that can be used if you need to return one as an error condition, etc. */
+    [[deprecated ("If you need an empty ValueTree object, just use ValueTree() or {}.")]]
+    static const ValueTree invalid;
+   #endif
 
 private:
     //==============================================================================
-    JUCE_PUBLIC_IN_DLL_BUILD (class SharedObject)
     friend class SharedObject;
 
     ReferenceCountedObjectPtr<SharedObject> object;

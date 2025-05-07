@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -159,7 +167,7 @@ public:
         A pointer to the object you pass in will be kept, but it won't be deleted
         by this object, so it's the caller's responsibility to manage it.
 
-        If you pass a nullptr, then no contraints will be placed on the positioning of the window.
+        If you pass a nullptr, then no constraints will be placed on the positioning of the window.
     */
     void setConstrainer (ComponentBoundsConstrainer* newConstrainer);
 
@@ -293,12 +301,12 @@ public:
     /** Returns the width of the frame to use around the window.
         @see getContentComponentBorder
     */
-    virtual BorderSize<int> getBorderThickness();
+    virtual BorderSize<int> getBorderThickness() const;
 
     /** Returns the insets to use when positioning the content component.
         @see getBorderThickness
     */
-    virtual BorderSize<int> getContentComponentBorder();
+    virtual BorderSize<int> getContentComponentBorder() const;
 
     //==============================================================================
     /** A set of colour IDs to use to change the colour of various aspects of the window.
@@ -314,10 +322,13 @@ public:
     };
 
     //==============================================================================
-    // Deprecated: use setContentOwned() and setContentNonOwned() instead.
-    JUCE_DEPRECATED (void setContentComponent (Component* newContentComponent,
-                                               bool deleteOldOne = true,
-                                               bool resizeToFit = false));
+   #ifndef DOXYGEN
+    [[deprecated ("use setContentOwned and setContentNonOwned instead.")]]
+    void setContentComponent (Component* newContentComponent,
+                              bool deleteOldOne = true,
+                              bool resizeToFit = false);
+   #endif
+
     using TopLevelWindow::addToDesktop;
 
     //==============================================================================
@@ -382,10 +393,20 @@ protected:
     std::unique_ptr<ResizableCornerComponent> resizableCorner;
     std::unique_ptr<ResizableBorderComponent> resizableBorder;
 
+    //==============================================================================
+    // The parameters for these methods have changed - please update your code!
+    void getBorderThickness (int& left, int& top, int& right, int& bottom);
+    void getContentComponentBorder (int& left, int& top, int& right, int& bottom);
+
 private:
     //==============================================================================
-    Component::SafePointer<Component> contentComponent, splashScreen;
-    bool ownsContentComponent = false, resizeToFitContent = false, fullscreen = false, canDrag = true, dragStarted = false;
+    Component::SafePointer<Component> contentComponent;
+    bool ownsContentComponent = false;
+    bool resizeToFitContent = false;
+    bool fullscreen = false;
+    bool canDrag = true;
+    bool dragStarted = false;
+    bool resizable = false;
     ComponentDragger dragger;
     Rectangle<int> lastNonFullScreenPos;
     ComponentBoundsConstrainer defaultConstrainer;
@@ -399,12 +420,6 @@ private:
     void updateLastPosIfShowing();
     void setContent (Component*, bool takeOwnership, bool resizeToFit);
     void updatePeerConstrainer();
-
-   #if JUCE_CATCH_DEPRECATED_CODE_MISUSE
-    // The parameters for these methods have changed - please update your code!
-    JUCE_DEPRECATED (void getBorderThickness (int& left, int& top, int& right, int& bottom));
-    JUCE_DEPRECATED (void getContentComponentBorder (int& left, int& top, int& right, int& bottom));
-   #endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ResizableWindow)
 };

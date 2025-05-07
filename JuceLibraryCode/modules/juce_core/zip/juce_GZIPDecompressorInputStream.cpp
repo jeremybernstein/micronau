@@ -1,21 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   The code included in this file is provided under the terms of the ISC license
-   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
-   To use, copy, modify, and/or distribute this software for any purpose with or
-   without fee is hereby granted provided that the above copyright notice and
-   this permission notice appear in all copies.
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+
+   Or:
+
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -23,40 +35,40 @@
 namespace juce
 {
 
-#if JUCE_MSVC
- #pragma warning (push)
- #pragma warning (disable: 4309 4305 4365)
-#endif
+JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4127 4244 4309 4305 4365 6385 6326 6340)
 
 namespace zlibNamespace
 {
  #if JUCE_INCLUDE_ZLIB_CODE
-  #if JUCE_CLANG
-   #pragma clang diagnostic push
-   #pragma clang diagnostic ignored "-Wconversion"
-   #pragma clang diagnostic ignored "-Wshadow"
-   #pragma clang diagnostic ignored "-Wdeprecated-register"
-   #if __has_warning("-Wzero-as-null-pointer-constant")
-    #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-   #endif
-   #if __has_warning("-Wcomma")
-    #pragma clang diagnostic ignored "-Wcomma"
-   #endif
-  #endif
+  JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wconversion",
+                                       "-Wsign-conversion",
+                                       "-Wshadow",
+                                       "-Wdeprecated-register",
+                                       "-Wswitch-enum",
+                                       "-Wswitch-default",
+                                       "-Wredundant-decls",
+                                       "-Wimplicit-fallthrough",
+                                       "-Wzero-as-null-pointer-constant",
+                                       "-Wcomma",
+                                       "-Wcast-align",
+                                       "-Wkeyword-macro",
+                                       "-Wmissing-prototypes")
 
-  #if JUCE_GCC
-   #pragma GCC diagnostic push
-   #pragma GCC diagnostic ignored "-Wconversion"
-   #pragma GCC diagnostic ignored "-Wsign-conversion"
-   #pragma GCC diagnostic ignored "-Wshadow"
-   #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
-  #endif
+  #pragma push_macro ("register")
+  #define register
+
+  #pragma push_macro ("MIN")
+  #undef MIN
+
+  #pragma push_macro ("read")
+  #pragma push_macro ("write")
+  #pragma push_macro ("open")
+  #pragma push_macro ("close")
 
   #undef OS_CODE
   #undef fdopen
   #define ZLIB_INTERNAL
   #define NO_DUMMY_DECL
-  #include "zlib/zlib.h"
   #include "zlib/adler32.c"
   #include "zlib/compress.c"
   #undef DO1
@@ -71,6 +83,7 @@ namespace zlibNamespace
   #undef NEEDBITS
   #undef DROPBITS
   #undef BYTEBITS
+  #undef GZIP
   #include "zlib/inflate.c"
   #include "zlib/inftrees.c"
   #include "zlib/trees.c"
@@ -83,30 +96,29 @@ namespace zlibNamespace
   #undef Dad
   #undef Len
 
-  #if JUCE_CLANG
-   #pragma clang diagnostic pop
-  #endif
+  #pragma pop_macro ("close")
+  #pragma pop_macro ("open")
+  #pragma pop_macro ("write")
+  #pragma pop_macro ("read")
+  #pragma pop_macro ("MIN")
+  #pragma pop_macro ("register")
 
-  #if JUCE_GCC
-   #pragma GCC diagnostic pop
-  #endif
+  JUCE_END_IGNORE_WARNINGS_GCC_LIKE
  #else
   #include JUCE_ZLIB_INCLUDE_PATH
-
-  #ifndef z_uInt
-   #ifdef uInt
-    #define z_uInt uInt
-   #else
-    #define z_uInt unsigned int
-   #endif
-  #endif
-
  #endif
+
+#ifndef z_uInt
+ #ifdef uInt
+  #define z_uInt uInt
+ #else
+  #define z_uInt unsigned int
+ #endif
+#endif
+
 }
 
-#if JUCE_MSVC
- #pragma warning (pop)
-#endif
+JUCE_END_IGNORE_WARNINGS_MSVC
 
 //==============================================================================
 // internal helper object that holds the zlib structures so they don't have to be
@@ -151,7 +163,7 @@ public:
             {
             case Z_STREAM_END:
                 finished = true;
-                // deliberate fall-through
+                JUCE_FALLTHROUGH
             case Z_OK:
                 data += dataSize - stream.avail_in;
                 dataSize = (z_uInt) stream.avail_in;
@@ -166,7 +178,7 @@ public:
             case Z_DATA_ERROR:
             case Z_MEM_ERROR:
                 error = true;
-
+                JUCE_FALLTHROUGH
             default:
                 break;
             }
@@ -315,7 +327,7 @@ bool GZIPDecompressorInputStream::setPosition (int64 newPos)
 //==============================================================================
 #if JUCE_UNIT_TESTS
 
-struct GZIPDecompressorInputStreamTests   : public UnitTest
+struct GZIPDecompressorInputStreamTests final : public UnitTest
 {
     GZIPDecompressorInputStreamTests()
         : UnitTest ("GZIPDecompressorInputStreamTests", UnitTestCategories::streams)

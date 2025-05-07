@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -131,11 +139,25 @@ public:
     /** Returns true if shaders can be used in this context. */
     bool areShadersAvailable() const;
 
-    /** OpenGL versions, used by setOpenGLVersionRequired(). */
+    /** Returns true if non-power-of-two textures are supported in this context. */
+    bool isTextureNpotSupported() const;
+
+    /** OpenGL versions, used by setOpenGLVersionRequired().
+
+        The Core profile doesn't include some legacy functionality, including the
+        fixed-function pipeline.
+
+        The Compatibility profile is backwards-compatible, and includes functionality
+        deprecated in the Core profile. However, not all implementations provide
+        compatibility profiles targeting later versions of OpenGL. To run on the
+        broadest range of hardware, using the 3.2 Core profile is recommended.
+    */
     enum OpenGLVersion
     {
-        defaultGLVersion = 0,
-        openGL3_2
+        defaultGLVersion = 0, ///< Whatever the device decides to give us, normally a compatibility profile
+        openGL3_2,            ///< 3.2 Core profile
+        openGL4_1,            ///< 4.1 Core profile, the latest supported by macOS at time of writing
+        openGL4_3             ///< 4.3 Core profile, will enable improved debugging support when building in Debug
     };
 
     /** Sets a preference for the version of GL that this context should use, if possible.
@@ -248,7 +270,7 @@ public:
         This function can only be called if the context is attached to a component.
         Otherwise, this function will assert.
 
-        This function is useful when you need to excute house-keeping tasks such
+        This function is useful when you need to execute house-keeping tasks such
         as allocating, deallocating textures or framebuffers. As such, the functor
         will execute without locking the message thread. Therefore, it is not
         intended for any drawing commands or GUI code. Any GUI code should be
@@ -258,9 +280,12 @@ public:
     void executeOnGLThread (T&& functor, bool blockUntilFinished);
 
     //==============================================================================
-    /** Returns the scale factor used by the display that is being rendered.
+    /** Returns a scale factor that relates the context component's size to the number
+        of physical pixels it covers on the screen.
 
-        The scale is that of the display - see Displays::Display::scale
+        In special cases it will be the same as Displays::Display::scale, but it also
+        includes AffineTransforms that affect the rendered area, and will be correctly
+        reported not just in standalone applications but plugins as well.
 
         Note that this should only be called during an OpenGLRenderer::renderOpenGL()
         callback - at other times the value it returns is undefined.
@@ -273,13 +298,19 @@ public:
     */
     unsigned int getFrameBufferID() const noexcept;
 
-    /** Returns an OS-dependent handle to some kind of underlting OS-provided GL context.
+    /** Returns an OS-dependent handle to some kind of underlying OS-provided GL context.
 
         The exact type of the value returned will depend on the OS and may change
         if the implementation changes. If you want to use this, digging around in the
         native code is probably the best way to find out what it is.
     */
     void* getRawContext() const noexcept;
+
+    /** Returns true if this context is using the core profile.
+
+        @see OpenGLVersion
+    */
+    bool isCoreProfile() const;
 
     /** This structure holds a set of dynamically loaded GL functions for use on this context. */
     OpenGLExtensionFunctions extensions;
@@ -301,8 +332,8 @@ public:
     void copyTexture (const Rectangle<int>& targetClipArea,
                       const Rectangle<int>& anchorPosAndTextureSize,
                       int contextWidth, int contextHeight,
-                      bool textureOriginIsBottomLeft);
-
+                      bool textureOriginIsBottomLeft,
+                      bool blend = true);
 
     /** Changes the amount of GPU memory that the internal cache for Images is allowed to use. */
     void setImageCacheSize (size_t cacheSizeBytes) noexcept;
@@ -316,6 +347,13 @@ public:
    #endif
 
 private:
+    enum class InitResult
+    {
+        fatal,
+        retry,
+        success
+    };
+
     friend class OpenGLTexture;
 
     class CachedImage;
@@ -328,7 +366,8 @@ private:
     void* contextToShareWith = nullptr;
     OpenGLVersion versionRequired = defaultGLVersion;
     size_t imageCacheMaxSize = 8 * 1024 * 1024;
-    bool renderComponents = true, useMultisampling = false, continuousRepaint = false, overrideCanAttach = false;
+    bool renderComponents = true, useMultisampling = false, overrideCanAttach = false;
+    std::atomic<bool> continuousRepaint { false };
     TextureMagnificationFilter texMagFilter = linear;
 
     //==============================================================================

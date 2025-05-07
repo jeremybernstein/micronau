@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -95,10 +103,26 @@ public:
     */
     void startDragging (const var& sourceDescription,
                         Component* sourceComponent,
-                        Image dragImage = Image(),
+                        const ScaledImage& dragImage = ScaledImage(),
                         bool allowDraggingToOtherJuceWindows = false,
                         const Point<int>* imageOffsetFromMouse = nullptr,
                         const MouseInputSource* inputSourceCausingDrag = nullptr);
+
+    [[deprecated ("This overload does not allow the image's scale to be specified. Use the other overload of startDragging instead.")]]
+    void startDragging (const var& sourceDescription,
+                        Component* sourceComponent,
+                        Image dragImage,
+                        bool allowDraggingToOtherJuceWindows = false,
+                        const Point<int>* imageOffsetFromMouse = nullptr,
+                        const MouseInputSource* inputSourceCausingDrag = nullptr)
+    {
+        startDragging (sourceDescription,
+                       sourceComponent,
+                       ScaledImage (dragImage),
+                       allowDraggingToOtherJuceWindows,
+                       imageOffsetFromMouse,
+                       inputSourceCausingDrag);
+    }
 
     /** Returns true if something is currently being dragged. */
     bool isDragAndDropActive() const;
@@ -131,13 +155,19 @@ public:
 
         @see setDragImageForIndex
     */
-    void setCurrentDragImage (const Image& newImage);
+    void setCurrentDragImage (const ScaledImage& newImage);
+
+    [[deprecated ("This overload does not allow the image's scale to be specified. Use the other overload of setCurrentDragImage instead.")]]
+    void setCurrentDragImage (const Image& newImage) { setCurrentDragImage (ScaledImage (newImage)); }
 
     /** Same as the setCurrentDragImage() method but takes a touch index parameter.
 
         @see setCurrentDragImage
-     */
-    void setDragImageForIndex (int index, const Image& newImage);
+    */
+    void setDragImageForIndex (int index, const ScaledImage& newImage);
+
+    [[deprecated ("This overload does not allow the image's scale to be specified. Use the other overload of setDragImageForIndex instead.")]]
+    void setDragImageForIndex (int index, const Image& newImage) { setDragImageForIndex (index, ScaledImage (newImage)); }
 
     /** Utility to find the DragAndDropContainer for a given Component.
 
@@ -238,13 +268,6 @@ private:
 
     const MouseInputSource* getMouseInputSourceForDrag (Component* sourceComponent, const MouseInputSource* inputSourceCausingDrag);
     bool isAlreadyDragging (Component* sourceComponent) const noexcept;
-
-   #if JUCE_CATCH_DEPRECATED_CODE_MISUSE
-    // This is just here to cause a compile error in old code that hasn't been changed to use the new
-    // version of this method.
-    virtual int dragOperationStarted()              { return 0; }
-    virtual int dragOperationEnded()                { return 0; }
-   #endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DragAndDropContainer)
 };

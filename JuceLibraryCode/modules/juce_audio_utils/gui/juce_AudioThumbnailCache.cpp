@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -61,11 +69,11 @@ private:
 
 //==============================================================================
 AudioThumbnailCache::AudioThumbnailCache (const int maxNumThumbs)
-    : thread ("thumb cache"),
+    : thread (SystemStats::getJUCEVersion() + ": thumb cache"),
       maxNumThumbsToStore (maxNumThumbs)
 {
     jassert (maxNumThumbsToStore > 0);
-    thread.startThread (2);
+    thread.startThread (Thread::Priority::low);
 }
 
 AudioThumbnailCache::~AudioThumbnailCache()
@@ -75,8 +83,8 @@ AudioThumbnailCache::~AudioThumbnailCache()
 AudioThumbnailCache::ThumbnailCacheEntry* AudioThumbnailCache::findThumbFor (const int64 hash) const
 {
     for (int i = thumbs.size(); --i >= 0;)
-        if (thumbs.getUnchecked(i)->hash == hash)
-            return thumbs.getUnchecked(i);
+        if (thumbs.getUnchecked (i)->hash == hash)
+            return thumbs.getUnchecked (i);
 
     return nullptr;
 }
@@ -88,7 +96,7 @@ int AudioThumbnailCache::findOldestThumb() const
 
     for (int i = thumbs.size(); --i >= 0;)
     {
-        const ThumbnailCacheEntry* const te = thumbs.getUnchecked(i);
+        const ThumbnailCacheEntry* const te = thumbs.getUnchecked (i);
 
         if (te->lastUsed < oldestTime)
         {
@@ -151,11 +159,11 @@ void AudioThumbnailCache::removeThumb (const int64 hashCode)
     const ScopedLock sl (lock);
 
     for (int i = thumbs.size(); --i >= 0;)
-        if (thumbs.getUnchecked(i)->hash == hashCode)
+        if (thumbs.getUnchecked (i)->hash == hashCode)
             thumbs.remove (i);
 }
 
-static inline int getThumbnailCacheFileMagicHeader() noexcept
+static int getThumbnailCacheFileMagicHeader() noexcept
 {
     return (int) ByteOrder::littleEndianInt ("ThmC");
 }
@@ -183,7 +191,7 @@ void AudioThumbnailCache::writeToStream (OutputStream& out)
     out.writeInt (thumbs.size());
 
     for (int i = 0; i < thumbs.size(); ++i)
-        thumbs.getUnchecked(i)->write (out);
+        thumbs.getUnchecked (i)->write (out);
 }
 
 void AudioThumbnailCache::saveNewlyFinishedThumbnail (const AudioThumbnailBase&, int64)

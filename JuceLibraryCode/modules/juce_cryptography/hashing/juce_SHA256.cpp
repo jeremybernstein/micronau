@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -139,14 +147,14 @@ private:
                           0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
     uint64_t length = 0;
 
-    static inline uint32_t rotate (uint32_t x, uint32_t y) noexcept            { return (x >> y) | (x << (32 - y)); }
-    static inline uint32_t ch  (uint32_t x, uint32_t y, uint32_t z) noexcept   { return z ^ ((y ^ z) & x); }
-    static inline uint32_t maj (uint32_t x, uint32_t y, uint32_t z) noexcept   { return y ^ ((y ^ z) & (x ^ y)); }
+    static uint32_t rotate (uint32_t x, uint32_t y) noexcept            { return (x >> y) | (x << (32 - y)); }
+    static uint32_t ch  (uint32_t x, uint32_t y, uint32_t z) noexcept   { return z ^ ((y ^ z) & x); }
+    static uint32_t maj (uint32_t x, uint32_t y, uint32_t z) noexcept   { return y ^ ((y ^ z) & (x ^ y)); }
 
-    static inline uint32_t s0 (uint32_t x) noexcept     { return rotate (x, 7)  ^ rotate (x, 18) ^ (x >> 3); }
-    static inline uint32_t s1 (uint32_t x) noexcept     { return rotate (x, 17) ^ rotate (x, 19) ^ (x >> 10); }
-    static inline uint32_t S0 (uint32_t x) noexcept     { return rotate (x, 2)  ^ rotate (x, 13) ^ rotate (x, 22); }
-    static inline uint32_t S1 (uint32_t x) noexcept     { return rotate (x, 6)  ^ rotate (x, 11) ^ rotate (x, 25); }
+    static uint32_t s0 (uint32_t x) noexcept     { return rotate (x, 7)  ^ rotate (x, 18) ^ (x >> 3); }
+    static uint32_t s1 (uint32_t x) noexcept     { return rotate (x, 17) ^ rotate (x, 19) ^ (x >> 10); }
+    static uint32_t S0 (uint32_t x) noexcept     { return rotate (x, 2)  ^ rotate (x, 13) ^ rotate (x, 22); }
+    static uint32_t S1 (uint32_t x) noexcept     { return rotate (x, 6)  ^ rotate (x, 11) ^ rotate (x, 25); }
 };
 
 //==============================================================================
@@ -216,7 +224,7 @@ bool SHA256::operator!= (const SHA256& other) const noexcept  { return ! operato
 //==============================================================================
 #if JUCE_UNIT_TESTS
 
-class SHA256Tests  : public UnitTest
+class SHA256Tests final : public UnitTest
 {
 public:
     SHA256Tests()

@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -36,12 +44,12 @@ AffineTransform::AffineTransform (float m00, float m01, float m02,
 
 bool AffineTransform::operator== (const AffineTransform& other) const noexcept
 {
-    return mat00 == other.mat00
-        && mat01 == other.mat01
-        && mat02 == other.mat02
-        && mat10 == other.mat10
-        && mat11 == other.mat11
-        && mat12 == other.mat12;
+    const auto tie = [] (const AffineTransform& a)
+    {
+        return std::tie (a.mat00, a.mat01, a.mat02, a.mat10, a.mat11, a.mat12);
+    };
+
+    return tie (*this) == tie (other);
 }
 
 bool AffineTransform::operator!= (const AffineTransform& other) const noexcept
@@ -52,15 +60,10 @@ bool AffineTransform::operator!= (const AffineTransform& other) const noexcept
 //==============================================================================
 bool AffineTransform::isIdentity() const noexcept
 {
-    return mat01 == 0.0f
-        && mat02 == 0.0f
-        && mat10 == 0.0f
-        && mat12 == 0.0f
-        && mat00 == 1.0f
-        && mat11 == 1.0f;
+    return operator== (AffineTransform());
 }
 
-JUCE_DECLARE_DEPRECATED_STATIC (const AffineTransform AffineTransform::identity (1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);)
+const AffineTransform AffineTransform::identity (1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 
 //==============================================================================
 AffineTransform AffineTransform::followedBy (const AffineTransform& other) const noexcept
@@ -187,9 +190,9 @@ AffineTransform AffineTransform::verticalFlip (float height) noexcept
 
 AffineTransform AffineTransform::inverted() const noexcept
 {
-    double determinant = (mat00 * mat11 - mat10 * mat01);
+    double determinant = getDeterminant();
 
-    if (determinant != 0)
+    if (! approximatelyEqual (determinant, 0.0))
     {
         determinant = 1.0 / determinant;
 
@@ -208,7 +211,7 @@ AffineTransform AffineTransform::inverted() const noexcept
 
 bool AffineTransform::isSingularity() const noexcept
 {
-    return (mat00 * mat11 - mat10 * mat01) == 0.0f;
+    return exactlyEqual (mat00 * mat11 - mat10 * mat01, 0.0f);
 }
 
 AffineTransform AffineTransform::fromTargetPoints (float x00, float y00,
@@ -230,15 +233,75 @@ AffineTransform AffineTransform::fromTargetPoints (float sx1, float sy1, float t
 
 bool AffineTransform::isOnlyTranslation() const noexcept
 {
-    return mat01 == 0.0f
-        && mat10 == 0.0f
-        && mat00 == 1.0f
-        && mat11 == 1.0f;
+    return exactlyEqual (mat01, 0.0f)
+        && exactlyEqual (mat10, 0.0f)
+        && exactlyEqual (mat00, 1.0f)
+        && exactlyEqual (mat11, 1.0f);
+}
+
+bool AffineTransform::isOnlyTranslationOrScale() const noexcept
+{
+    return exactlyEqual (mat01, 0.0f) && exactlyEqual (mat10, 0.0f);
+}
+
+float AffineTransform::getDeterminant() const noexcept
+{
+    return (mat00 * mat11) - (mat01 * mat10);
 }
 
 float AffineTransform::getScaleFactor() const noexcept
 {
     return (std::abs (mat00) + std::abs (mat11)) / 2.0f;
 }
+
+
+//==============================================================================
+//==============================================================================
+#if JUCE_UNIT_TESTS
+
+class AffineTransformTests final : public UnitTest
+{
+public:
+    AffineTransformTests()
+        : UnitTest ("AffineTransform", UnitTestCategories::maths)
+    {}
+
+    void runTest() override
+    {
+        beginTest ("Determinant");
+        {
+            constexpr float scale1 = 1.5f, scale2 = 1.3f;
+
+            auto transform = AffineTransform::scale (scale1)
+                                             .followedBy (AffineTransform::rotation (degreesToRadians (72.0f)))
+                                             .followedBy (AffineTransform::translation (100.0f, 20.0f))
+                                             .followedBy (AffineTransform::scale (scale2));
+
+            expect (approximatelyEqual (std::sqrt (std::abs (transform.getDeterminant())), scale1 * scale2));
+        }
+
+        beginTest ("fromTargetPoints");
+        {
+            const Point a (0.0f, 0.0f);
+            const Point b (1.0f, 0.0f);
+            const Point c (0.0f, 1.0f);
+            const Point translation (1.0f, 1.0f);
+            const auto transform = AffineTransform::fromTargetPoints (a, a + translation,
+                                                                      b, b + translation,
+                                                                      c, c + translation);
+            expect (exactlyEqual (transform.mat00, 1.0f));
+            expect (exactlyEqual (transform.mat01, 0.0f));
+            expect (exactlyEqual (transform.mat02, translation.x));
+
+            expect (exactlyEqual (transform.mat10, 0.0f));
+            expect (exactlyEqual (transform.mat11, 1.0f));
+            expect (exactlyEqual (transform.mat12, translation.y));
+        }
+    }
+};
+
+static AffineTransformTests timeTests;
+
+#endif
 
 } // namespace juce

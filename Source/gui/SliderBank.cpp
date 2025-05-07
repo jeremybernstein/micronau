@@ -8,9 +8,9 @@
   ==============================================================================
 */
 
+#include "../micronauEditor.h"
 #include "MicronSlider.h"
 #include "SliderBank.h"
-#include "../micronauEditor.h"
 
 //==============================================================================
 SliderBank::SliderBank (MicronauAudioProcessor *owner, MicronauAudioProcessorEditor *parent)

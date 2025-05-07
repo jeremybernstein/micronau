@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -27,25 +35,7 @@
 namespace juce
 {
 
-#if JUCE_MSVC
- #pragma warning (push)
- #pragma warning (disable: 4390 4611 4365 4267)
- #ifdef __INTEL_COMPILER
-  #pragma warning (disable: 2544 2545)
- #endif
-#endif
-
-namespace zlibNamespace
-{
-#if JUCE_INCLUDE_ZLIB_CODE
-  #undef OS_CODE
-  #undef fdopen
-  #include "../../juce_core/zip/zlib/zlib.h"
-  #undef OS_CODE
-#else
-  #include JUCE_ZLIB_INCLUDE_PATH
-#endif
-}
+JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4390 4611 4365 4267 4616 2544 2545 6297)
 
 #if ! defined (jmp_buf) || ! defined (longjmp)
  #include <setjmp.h>
@@ -57,36 +47,25 @@ namespace pnglibNamespace
 
 #if JUCE_INCLUDE_PNGLIB_CODE || ! defined (JUCE_INCLUDE_PNGLIB_CODE)
 
-  #if _MSC_VER != 1310
-   using std::calloc; // (causes conflict in VS.NET 2003)
-   using std::malloc;
-   using std::free;
-  #endif
-
-  #if JUCE_CLANG
-   #pragma clang diagnostic push
-   #pragma clang diagnostic ignored "-Wsign-conversion"
-   #if __has_warning("-Wzero-as-null-pointer-constant")
-    #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-   #endif
-   #if __has_warning("-Wcomma")
-    #pragma clang diagnostic ignored "-Wcomma"
-   #endif
-  #endif
-
-  #if JUCE_GCC
-   #pragma GCC diagnostic push
-   #pragma GCC diagnostic ignored "-Wsign-conversion"
-   #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
-  #endif
+   JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wcomma",
+                                        "-Wfloat-equal",
+                                        "-Wimplicit-fallthrough",
+                                        "-Wmaybe-uninitialized",
+                                        "-Wnull-pointer-subtraction",
+                                        "-Wsign-conversion",
+                                        "-Wtautological-constant-out-of-range-compare",
+                                        "-Wzero-as-null-pointer-constant")
 
   #undef check
-  using std::abs;
   #define NO_DUMMY_DECL
   #define PNGLCONF_H 1
 
  #if JUCE_ANDROID
   #define PNG_ARM_NEON_SUPPORTED
+ #endif
+
+ #ifndef Byte
+  using Byte = uint8_t;
  #endif
 
   #define PNG_16BIT_SUPPORTED
@@ -326,13 +305,7 @@ namespace pnglibNamespace
   #include "pnglib/pngwtran.c"
   #include "pnglib/pngwutil.c"
 
-  #if JUCE_CLANG
-   #pragma clang diagnostic pop
-  #endif
-
-  #if JUCE_GCC
-   #pragma GCC diagnostic pop
-  #endif
+  JUCE_END_IGNORE_WARNINGS_GCC_LIKE
 
 #else
   extern "C"
@@ -347,9 +320,7 @@ namespace pnglibNamespace
 #undef min
 #undef fdopen
 
-#if JUCE_MSVC
- #pragma warning (pop)
-#endif
+JUCE_END_IGNORE_WARNINGS_MSVC
 
 //==============================================================================
 namespace PNGHelpers
@@ -372,7 +343,7 @@ namespace PNGHelpers
     static void JUCE_CDECL errorCallback (png_structp p, png_const_charp)
     {
        #ifdef PNG_SETJMP_SUPPORTED
-        setjmp(png_jmpbuf(p));
+        setjmp (png_jmpbuf (p));
        #else
         longjmp (*(jmp_buf*) p->error_ptr, 1);
        #endif
@@ -380,10 +351,7 @@ namespace PNGHelpers
 
     static void JUCE_CDECL warningCallback (png_structp, png_const_charp) {}
 
-   #if JUCE_MSVC
-    #pragma warning (push)
-    #pragma warning (disable: 4611) // (warning about setjmp)
-   #endif
+    JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4611)
 
     static bool readHeader (InputStream& in, png_structp pngReadStruct, png_infop pngInfoStruct, jmp_buf& errorJumpBuf,
                             png_uint_32& width, png_uint_32& height, int& bitDepth, int& colorType, int& interlaceType) noexcept
@@ -435,9 +403,7 @@ namespace PNGHelpers
         return false;
     }
 
-   #if JUCE_MSVC
-    #pragma warning (pop)
-   #endif
+    JUCE_END_IGNORE_WARNINGS_MSVC
 
     static Image createImageFromData (bool hasAlphaChan, int width, int height, png_bytepp rows)
     {

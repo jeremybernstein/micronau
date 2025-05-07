@@ -10,8 +10,8 @@
 #ifndef __PLUGINEDITOR_H_74E5CE11__
 #define __PLUGINEDITOR_H_74E5CE11__
 
-#include "../JuceLibraryCode/JuceHeader.h"
 #include "micronau.h"
+#include "../JuceLibraryCode/JuceHeader.h"
 #include "gui/MicronSlider.h"
 #include "gui/LcdComboBox.h"
 #include "gui/MicronToggleButton.h"
@@ -133,23 +133,23 @@ class MicronauAudioProcessorEditor  : public AudioProcessorEditor,
 {
 public:
     MicronauAudioProcessorEditor (MicronauAudioProcessor* ownerFilter);
-    ~MicronauAudioProcessorEditor();
+    ~MicronauAudioProcessorEditor() override;
 
     //==============================================================================
-    void paint (Graphics& g);
-    void timerCallback();
-    void sliderValueChanged (Slider* slider);
-	void sliderDragStarted (Slider* slider);
-	void sliderDragEnded (Slider* slider);
-	void mouseDown(const MouseEvent& event);
-    KeyboardFocusTraverser* createFocusTraverser();
-    void buttonClicked (Button* button);
-    void comboBoxChanged (ComboBox* comboBoxThatHasChanged);
-    void textEditorTextChanged (TextEditor &t);
-	void textEditorFocusLost (TextEditor &t);
+    void paint (Graphics& g) override;
+    void timerCallback() override;
+    void sliderValueChanged (Slider* slider) override;
+	void sliderDragStarted (Slider* slider) override;
+	void sliderDragEnded (Slider* slider) override;
+	void mouseDown(const MouseEvent& event) override;
+    std::unique_ptr<ComponentTraverser> createFocusTraverser() override;
+    void buttonClicked (Button* button) override;
+    void comboBoxChanged (ComboBox* comboBoxThatHasChanged) override;
+    void textEditorTextChanged (TextEditor &t) override;
+	void textEditorFocusLost (TextEditor &t) override;
     void addSlider(ext_slider *s) {sliders.add(s);}
-    void audioProcessorParameterChanged (AudioProcessor* processor, int parameterIndex, float newValue) { paramHasChanged = true; }
-	void audioProcessorChanged (AudioProcessor* processor) { paramHasChanged = true; }
+    void audioProcessorParameterChanged (AudioProcessor* processor, int parameterIndex, float newValue) override { paramHasChanged = true; }
+	void audioProcessorChanged (AudioProcessor* processor, const ChangeDetails& details) override { paramHasChanged = true; }
 
 private:
 

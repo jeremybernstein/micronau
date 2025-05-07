@@ -1,25 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 5 End-User License
-   Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
-   27th April 2017).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-5-licence
-   Privacy Policy: www.juce.com/juce-5-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -31,6 +39,11 @@ class ComponentAnimator::AnimationTask
 {
 public:
     AnimationTask (Component* c) noexcept  : component (c) {}
+
+    ~AnimationTask()
+    {
+        proxy.deleteAndZero();
+    }
 
     void reset (const Rectangle<int>& finalBounds,
                 float finalAlpha,
@@ -45,7 +58,7 @@ public:
         destAlpha = finalAlpha;
 
         isMoving = (finalBounds != component->getBounds());
-        isChangingAlpha = (finalAlpha != component->getAlpha());
+        isChangingAlpha = ! approximatelyEqual (finalAlpha, component->getAlpha());
 
         left    = component->getX();
         top     = component->getY();
@@ -58,17 +71,17 @@ public:
         midSpeed = invTotalDistance;
         endSpeed = jmax (0.0, endSpd * invTotalDistance);
 
+        proxy.deleteAndZero();
+
         if (useProxyComponent)
-            proxy.reset (new ProxyComponent (*component));
-        else
-            proxy.reset();
+            proxy = new ProxyComponent (*component);
 
         component->setVisible (! useProxyComponent);
     }
 
     bool useTimeslice (const int elapsed)
     {
-        if (auto* c = proxy != nullptr ? proxy.get()
+        if (auto* c = proxy != nullptr ? proxy.getComponent()
                                        : component.get())
         {
             msElapsed += elapsed;
@@ -142,7 +155,7 @@ public:
     }
 
     //==============================================================================
-    struct ProxyComponent  : public Component
+    struct ProxyComponent final : public Component
     {
         ProxyComponent (Component& c)
         {
@@ -159,7 +172,8 @@ public:
             else
                 jassertfalse; // seem to be trying to animate a component that's not visible..
 
-            auto scale = (float) Desktop::getInstance().getDisplays().findDisplayForRect (getScreenBounds()).scale;
+            auto scale = (float) Desktop::getInstance().getDisplays().getDisplayForRect (getScreenBounds())->scale
+                           * Component::getApproximateScaleFactorForComponent (&c);
 
             image = c.createComponentSnapshot (c.getLocalBounds(), false, scale);
 
@@ -170,18 +184,23 @@ public:
         void paint (Graphics& g) override
         {
             g.setOpacity (1.0f);
-            g.drawImageTransformed (image, AffineTransform::scale (getWidth()  / (float) image.getWidth(),
-                                                                   getHeight() / (float) image.getHeight()), false);
+            g.drawImageTransformed (image, AffineTransform::scale ((float) getWidth()  / (float) jmax (1, image.getWidth()),
+                                                                   (float) getHeight() / (float) jmax (1, image.getHeight())), false);
         }
 
     private:
+        std::unique_ptr<AccessibilityHandler> createAccessibilityHandler() override
+        {
+            return createIgnoredAccessibilityHandler (*this);
+        }
+
         Image image;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProxyComponent)
     };
 
     WeakReference<Component> component;
-    std::unique_ptr<Component> proxy;
+    Component::SafePointer<Component> proxy;
 
     Rectangle<int> destination;
     double destAlpha;
@@ -211,8 +230,8 @@ ComponentAnimator::~ComponentAnimator() {}
 ComponentAnimator::AnimationTask* ComponentAnimator::findTaskFor (Component* const component) const noexcept
 {
     for (int i = tasks.size(); --i >= 0;)
-        if (component == tasks.getUnchecked(i)->component.get())
-            return tasks.getUnchecked(i);
+        if (component == tasks.getUnchecked (i)->component.get())
+            return tasks.getUnchecked (i);
 
     return nullptr;
 }
@@ -263,7 +282,7 @@ void ComponentAnimator::fadeOut (Component* component, int millisecondsToTake)
 
 void ComponentAnimator::fadeIn (Component* component, int millisecondsToTake)
 {
-    if (component != nullptr && ! (component->isVisible() && component->getAlpha() == 1.0f))
+    if (component != nullptr && ! (component->isVisible() && approximatelyEqual (component->getAlpha(), 1.0f)))
     {
         component->setAlpha (0.0f);
         component->setVisible (true);
@@ -277,7 +296,7 @@ void ComponentAnimator::cancelAllAnimations (const bool moveComponentsToTheirFin
     {
         if (moveComponentsToTheirFinalPositions)
             for (int i = tasks.size(); --i >= 0;)
-                tasks.getUnchecked(i)->moveToFinalDestination();
+                tasks.getUnchecked (i)->moveToFinalDestination();
 
         tasks.clear();
         sendChangeMessage();

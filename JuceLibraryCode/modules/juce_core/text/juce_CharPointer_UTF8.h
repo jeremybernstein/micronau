@@ -1,21 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2017 - ROLI Ltd.
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   The code included in this file is provided under the terms of the ISC license
-   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
-   To use, copy, modify, and/or distribute this software for any purpose with or
-   without fee is hereby granted provided that the above copyright notice and
-   this permission notice appear in all copies.
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+
+   Or:
+
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -36,44 +48,40 @@ class CharPointer_UTF8  final
 public:
     using CharType = char;
 
-    inline explicit CharPointer_UTF8 (const CharType* rawPointer) noexcept
+    explicit CharPointer_UTF8 (const CharType* rawPointer) noexcept
         : data (const_cast<CharType*> (rawPointer))
     {
     }
 
-    inline CharPointer_UTF8 (const CharPointer_UTF8& other) = default;
+    CharPointer_UTF8 (const CharPointer_UTF8& other) = default;
 
-    inline CharPointer_UTF8 operator= (CharPointer_UTF8 other) noexcept
-    {
-        data = other.data;
-        return *this;
-    }
+    CharPointer_UTF8& operator= (const CharPointer_UTF8& other) noexcept = default;
 
-    inline CharPointer_UTF8 operator= (const CharType* text) noexcept
+    CharPointer_UTF8& operator= (const CharType* text) noexcept
     {
         data = const_cast<CharType*> (text);
         return *this;
     }
 
     /** This is a pointer comparison, it doesn't compare the actual text. */
-    inline bool operator== (CharPointer_UTF8 other) const noexcept      { return data == other.data; }
-    inline bool operator!= (CharPointer_UTF8 other) const noexcept      { return data != other.data; }
-    inline bool operator<= (CharPointer_UTF8 other) const noexcept      { return data <= other.data; }
-    inline bool operator<  (CharPointer_UTF8 other) const noexcept      { return data <  other.data; }
-    inline bool operator>= (CharPointer_UTF8 other) const noexcept      { return data >= other.data; }
-    inline bool operator>  (CharPointer_UTF8 other) const noexcept      { return data >  other.data; }
+    bool operator== (CharPointer_UTF8 other) const noexcept      { return data == other.data; }
+    bool operator!= (CharPointer_UTF8 other) const noexcept      { return data != other.data; }
+    bool operator<= (CharPointer_UTF8 other) const noexcept      { return data <= other.data; }
+    bool operator<  (CharPointer_UTF8 other) const noexcept      { return data <  other.data; }
+    bool operator>= (CharPointer_UTF8 other) const noexcept      { return data >= other.data; }
+    bool operator>  (CharPointer_UTF8 other) const noexcept      { return data >  other.data; }
 
     /** Returns the address that this pointer is pointing to. */
-    inline CharType* getAddress() const noexcept        { return data; }
+    CharType* getAddress() const noexcept        { return data; }
 
     /** Returns the address that this pointer is pointing to. */
-    inline operator const CharType*() const noexcept    { return data; }
+    operator const CharType*() const noexcept    { return data; }
 
     /** Returns true if this pointer is pointing to a null character. */
-    inline bool isEmpty() const noexcept                { return *data == 0; }
+    bool isEmpty() const noexcept                { return *data == 0; }
 
     /** Returns true if this pointer is not pointing to a null character. */
-    inline bool isNotEmpty() const noexcept             { return *data != 0; }
+    bool isNotEmpty() const noexcept             { return *data != 0; }
 
     /** Returns the unicode character that this pointer is pointing to. */
     juce_wchar operator*() const noexcept
@@ -124,7 +132,7 @@ public:
             while ((static_cast<uint8> (n) & bit) != 0 && bit > 0x8)
             {
                 ++data;
-                bit >>= 1;
+                bit = static_cast<uint8> (bit >> 1);
             }
         }
 
@@ -132,7 +140,7 @@ public:
     }
 
     /** Moves this pointer back to the previous character in the string. */
-    CharPointer_UTF8 operator--() noexcept
+    CharPointer_UTF8& operator--() noexcept
     {
         int count = 0;
 
@@ -189,7 +197,7 @@ public:
     }
 
     /** Moves this pointer forwards by the specified number of characters. */
-    void operator+= (int numToSkip) noexcept
+    CharPointer_UTF8& operator+= (int numToSkip) noexcept
     {
         if (numToSkip < 0)
         {
@@ -201,12 +209,14 @@ public:
             while (--numToSkip >= 0)
                 ++*this;
         }
+
+        return *this;
     }
 
     /** Moves this pointer backwards by the specified number of characters. */
-    void operator-= (int numToSkip) noexcept
+    CharPointer_UTF8& operator-= (int numToSkip) noexcept
     {
-        operator+= (-numToSkip);
+        return operator+= (-numToSkip);
     }
 
     /** Returns the character at a given character index from the start of the string. */
@@ -220,17 +230,13 @@ public:
     /** Returns a pointer which is moved forwards from this one by the specified number of characters. */
     CharPointer_UTF8 operator+ (int numToSkip) const noexcept
     {
-        auto p (*this);
-        p += numToSkip;
-        return p;
+        return CharPointer_UTF8 (*this) += numToSkip;
     }
 
     /** Returns a pointer which is moved backwards from this one by the specified number of characters. */
     CharPointer_UTF8 operator- (int numToSkip) const noexcept
     {
-        auto p (*this);
-        p += -numToSkip;
-        return p;
+        return CharPointer_UTF8 (*this) -= numToSkip;
     }
 
     /** Returns the number of characters in this string. */
@@ -274,8 +280,10 @@ public:
     */
     size_t sizeInBytes() const noexcept
     {
+        JUCE_BEGIN_IGNORE_WARNINGS_MSVC (6387)
         jassert (data != nullptr);
         return strlen (data) + 1;
+        JUCE_END_IGNORE_WARNINGS_MSVC
     }
 
     /** Returns the number of bytes that would be needed to represent the given
@@ -348,7 +356,7 @@ public:
     }
 
     /** Writes a null character to this string (leaving the pointer's position unchanged). */
-    inline void writeNull() const noexcept
+    void writeNull() const noexcept
     {
         *data = 0;
     }
@@ -447,7 +455,7 @@ public:
     }
 
     /** Returns true if the first character of this string is whitespace. */
-    bool isWhitespace() const noexcept          { const CharType c = *data; return c == ' ' || (c <= 13 && c >= 9); }
+    bool isWhitespace() const noexcept          { return CharacterFunctions::isWhitespace ((juce_wchar) *(*this)); }
     /** Returns true if the first character of this string is a digit. */
     bool isDigit() const noexcept               { const CharType c = *data; return c >= '0' && c <= '9'; }
     /** Returns true if the first character of this string is a letter. */
@@ -470,7 +478,7 @@ public:
     /** Parses this string as a 64-bit integer. */
     int64 getIntValue64() const noexcept
     {
-       #if JUCE_WINDOWS && ! JUCE_MINGW
+       #if JUCE_WINDOWS
         return _atoi64 (data);
        #else
         return atoll (data);
@@ -483,48 +491,86 @@ public:
     /** Returns the first non-whitespace character in the string. */
     CharPointer_UTF8 findEndOfWhitespace() const noexcept       { return CharacterFunctions::findEndOfWhitespace (*this); }
 
+    /** Move this pointer to the first non-whitespace character in the string. */
+    void incrementToEndOfWhitespace() noexcept                  { CharacterFunctions::incrementToEndOfWhitespace (*this); }
+
     /** Returns true if the given unicode character can be represented in this encoding. */
     static bool canRepresent (juce_wchar character) noexcept
     {
-        return ((uint32) character) < (uint32) 0x10ffff;
+        return CharacterFunctions::isNonSurrogateCodePoint (character);
     }
 
     /** Returns true if this data contains a valid string in this encoding. */
-    static bool isValidString (const CharType* dataToTest, int maxBytesToRead)
+    static bool isValidString (const CharType* codeUnits, int maxBytesToRead)
     {
-        while (--maxBytesToRead >= 0 && *dataToTest != 0)
+        const auto maxCodeUnitsToRead = (size_t) maxBytesToRead / sizeof (CharType);
+
+        for (size_t codeUnitIndex = 0; codeUnitIndex < maxCodeUnitsToRead; ++codeUnitIndex)
         {
-            auto byte = (signed char) *dataToTest++;
+            const auto firstByte = (uint8_t) codeUnits[codeUnitIndex];
 
-            if (byte < 0)
+            if (firstByte == 0)
+                return true;
+
+            if (CharacterFunctions::isAscii ((juce_wchar) firstByte))
+                continue;
+
+            auto numExtraBytes = [&]
             {
-                int bit = 0x40;
-                int numExtraValues = 0;
+                if (firstByte < 0xc0)
+                    return 0;
 
-                while ((byte & bit) != 0)
-                {
-                    if (bit < 8)
-                        return false;
+                if (firstByte < 0xe0)
+                    return 1;
 
-                    ++numExtraValues;
-                    bit >>= 1;
+                if (firstByte <  0xf0)
+                    return 2;
 
-                    if (bit == 8 && (numExtraValues > maxBytesToRead
-                                       || *CharPointer_UTF8 (dataToTest - 1) > 0x10ffff))
-                        return false;
-                }
+                if (firstByte <= 0xf4)
+                    return 3;
 
-                if (numExtraValues == 0)
+                return 0;
+            }();
+
+            if (numExtraBytes == 0)
+                return false;
+
+            auto bytes = (uint32_t) firstByte;
+
+            while (numExtraBytes--)
+            {
+                if (++codeUnitIndex >= maxCodeUnitsToRead)
                     return false;
 
-                maxBytesToRead -= numExtraValues;
-                if (maxBytesToRead < 0)
-                    return false;
-
-                while (--numExtraValues >= 0)
-                    if ((*dataToTest++ & 0xc0) != 0x80)
-                        return false;
+                bytes <<= 8;
+                bytes |= (uint32_t) (uint8_t) codeUnits[codeUnitIndex];
             }
+
+            if (constexpr uint32_t firstTwoByteCodePoint = 0xc280; bytes < firstTwoByteCodePoint)
+                return false;
+
+            if (constexpr uint32_t lastTwoByteCodePoint = 0xdfbf; bytes <= lastTwoByteCodePoint)
+                continue;
+
+            if (constexpr uint32_t firstThreeByteCodePoint = 0xe0a080; bytes < firstThreeByteCodePoint)
+                return false;
+
+            if (constexpr uint32_t firstSurrogateCodePoint = 0xeda080; bytes < firstSurrogateCodePoint)
+                continue;
+
+            if (constexpr uint32_t lastSurrogateCodePoint = 0xedbfbf; bytes <= lastSurrogateCodePoint)
+                return false;
+
+            if (constexpr uint32_t lastThreeByteCodePoint = 0xefbfbf; bytes <= lastThreeByteCodePoint)
+                continue;
+
+            if (constexpr uint32_t firstFourByteCodePoint = 0xf0908080; bytes < firstFourByteCodePoint)
+                return false;
+
+            if (constexpr uint32_t lastFourByteCodePoint = 0xf48fbfbf; bytes <= lastFourByteCodePoint)
+                continue;
+
+            return false;
         }
 
         return true;
@@ -549,12 +595,14 @@ public:
     */
     static bool isByteOrderMark (const void* possibleByteOrder) noexcept
     {
+        JUCE_BEGIN_IGNORE_WARNINGS_MSVC (28182)
         jassert (possibleByteOrder != nullptr);
         auto c = static_cast<const uint8*> (possibleByteOrder);
 
         return c[0] == (uint8) byteOrderMark1
             && c[1] == (uint8) byteOrderMark2
             && c[2] == (uint8) byteOrderMark3;
+        JUCE_END_IGNORE_WARNINGS_MSVC
     }
 
 private:
